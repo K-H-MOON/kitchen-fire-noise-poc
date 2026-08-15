@@ -27,7 +27,7 @@ from google.colab import drive
 #     (A) 공유 문서함의 그 폴더에서 우클릭 → '바로가기 추가' → 내 드라이브에 넣기
 #     (B) 폴더를 내 드라이브로 복사
 #   그런 다음 아래 SRC_DIR 을 그 위치로 맞춘다.
-SRC_DIR   = '/content/drive/MyDrive/kitchen_src'      # 원본 영상 폴더
+SRC_DIR   = '/content/drive/MyDrive/조리 데이터 영상'  # 원본 영상 폴더 (바로가기)
 OUT_ROOT  = '/content/drive/MyDrive/fire_frames'      # 결과 저장 루트
 REPO      = '/content/kitchen-fire-noise-poc/scripts' # videos.json · split.json 이 있는 곳
 

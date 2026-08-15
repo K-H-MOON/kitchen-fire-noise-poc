@@ -1,0 +1,33 @@
+{
+ "note": "불꽃 소재 인벤토리. 실제 유류화재 영상에서 '불꽃이 보이는 구간'만 뽑아 매트를 만든다. 렌더링(절차적) 불꽃은 쓰지 않는다 — 그게 kitchen-fire-poc 가 유니폼에 반응한 원인이었다.",
+ "src_dir": "/content/drive/MyDrive/smoke_frames",
+ "src_note": "원본 유류화재 영상은 연기 프로젝트가 이미 모아 둔 것을 재사용한다(원본 재사용은 누수가 아님). 파일명 조각(file)으로 그 폴더에서 영상을 찾는다. 새 화재 영상을 더 모으면 여기에 항목을 추가한다.",
+ "matte_default": {
+  "v0": 70,
+  "core0": 190,
+  "thr": 0.12,
+  "_help": "v0=휘도 하한, core0=백열 코어(전 채널 밝음) 하한, thr=이 아래 알파는 0. 출처마다 배경·노출이 달라 QC 시트를 보고 항목별 matte 로 덮어쓴다."
+ },
+ "sources": [
+  {"key": "tempura01",  "file": "天ぷら油火災が発生するまで", "shots": [], "crop": null, "matte": null,
+   "_status": "불꽃 구간 미확인 — 영상 보고 [시작초,끝초] 를 채울 것. 발화 이후 불꽃이 뚜렷한 구간."},
+  {"key": "konro_ignite", "file": "過熱発火",              "shots": [], "crop": null, "matte": null,
+   "_status": "불꽃 구간 미확인 — 영상 보고 채울 것."},
+  {"key": "ih_debris",  "file": "異物挟み込み",            "shots": [], "crop": null, "matte": null,
+   "_status": "불꽃 구간 미확인 — 영상 보고 채울 것."},
+  {"key": "grease07",   "file": "Grease Fires",           "shots": [], "crop": null, "matte": null,
+   "_status": "불꽃 구간 미확인 — 영상 보고 채울 것."},
+  {"key": "dirty_pan",  "file": "汚れた鍋",               "shots": [], "crop": null, "matte": null,
+   "_status": "불꽃 구간 미확인 — 영상 보고 채울 것."},
+  {"key": "busan_oil",  "file": "식용유 화재 재현",        "shots": [], "crop": null, "matte": null,
+   "_status": "불꽃 구간 미확인 — 영상 보고 채울 것."},
+  {"key": "low_oil",    "file": "少ない油で発火",          "shots": [], "crop": null, "matte": null,
+   "_status": "불꽃 구간 미확인 — 영상 보고 채울 것."}
+ ],
+ "_workflow": [
+  "1) 위 출처 영상을 열어 불꽃이 뚜렷한 구간의 [시작초, 끝초] 를 shots 에 채운다 (한 출처에 여러 구간 가능).",
+  "2) assign_flame_split.py 로 출처를 train/test 풀로 나눈다 → flame_split.json.",
+  "3) colab_extract_flames.py 로 매트를 뽑고 QC 시트(_check.jpg)를 본다. 알파가 불꽃을 잘 딴 출처만 남긴다.",
+  "4) 매트가 나쁜 출처는 matte 값(v0/core0/thr)을 항목별로 조정하거나 탈락시킨다."
+ ]
+}
