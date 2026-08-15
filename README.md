@@ -26,11 +26,14 @@
 |------|------|:---:|
 | 0. 영상 인벤토리 | `scripts/videos.json` (28영상·13사이트) | ✅ |
 | 1. 사이트 분할 (사전 등록) | `scripts/assign_split.py` → `split.json` | ✅ |
-| 2. 배경 프레임 추출 | `scripts/colab_extract_frames.py` | ▶ 다음 (Colab) |
-| 3. 불꽃 합성 + 자동 박스 | (예정) | ⬜ |
-| 4. 학습 (YOLO) | (예정) | ⬜ |
-| 5. 노이즈 저하 곡선 (Phase A) | (예정) | ⬜ |
-| 6. 노이즈 증강 극복 (Phase B) | (예정) | ⬜ |
+| 2. 배경 프레임 추출 | `scripts/colab_extract_frames.py` | ▶ Colab 실행 |
+| 3a. 불꽃 소재 인벤토리 | `scripts/flames.json` | ◐ 불꽃 구간 채우는 중 |
+| 3b. 불꽃 풀 배정 | `scripts/assign_flame_split.py` → `flame_split.json` | ⬜ (3a 후) |
+| 3c. 불꽃 매트 추출 | `scripts/colab_extract_flames.py` | ⬜ (3a 후, Colab) |
+| 4. 불꽃 합성 + 자동 박스 | (예정) | ⬜ |
+| 5. 학습 (YOLO) | (예정) | ⬜ |
+| 6. 노이즈 저하 곡선 (Phase A) | (예정) | ⬜ |
+| 7. 노이즈 증강 극복 (Phase B) | (예정) | ⬜ |
 
 확정한 설계·근거는 **[docs/PREREGISTER.md](docs/PREREGISTER.md)** 에 있다.
 
