@@ -1,0 +1,13 @@
+# 데이터·영상·프레임·가중치는 저장소에 넣지 않음 (Drive 에 있음)
+*.mp4
+*.MOV
+*.mov
+*.avi
+*.mkv
+*.zip
+*.pt
+frames/
+data/
+runs/
+__pycache__/
+.ipynb_checkpoints/
