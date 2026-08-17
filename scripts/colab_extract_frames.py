@@ -14,7 +14,7 @@
 # 상한은 '할당량'이 아니라 '상한'이다 — 짧은 영상은 나오는 만큼만 낸다.
 # 실제 사이트별 수율은 끝에 표로 찍는다. 이 값을 보고 상한을 조정하면 된다.
 
-import os, sys, json, math, glob, unicodedata
+import os, sys, json, math, glob, shutil, unicodedata
 from google.colab import drive
 
 # ---------------------------------------------------------------------------
@@ -32,7 +32,11 @@ OUT_ROOT  = '/content/drive/MyDrive/fire_frames'      # 결과 저장 루트
 REPO      = '/content/kitchen-fire-noise-poc/scripts' # videos.json · split.json 이 있는 곳
 
 FPS_EXTRACT = 1.0     # 초당 뽑을 장수
-DEDUP_SIM   = 0.90    # 직전 채택본과 유사도 이 값 초과면 버림 (0~1)
+# 직전 채택본과 유사도 이 값 초과면 버림 (0~1).
+#   0.90 은 고정 CCTV(개원중)에 너무 공격적이어서 280장 중 1장만 남았음.
+#   배경은 불꽃을 얹을 캔버스라 좀 비슷해도 되고, 장수 확보가 더 중요하다.
+#   그래서 0.99 로 올려 '거의 동일한' 프레임만 버린다. train 은 어차피 캡으로 묶인다.
+DEDUP_SIM   = 0.99
 SITE_CAP    = 400     # 사이트당 최대 프레임
 JPG_QUALITY = 95
 
@@ -143,6 +147,8 @@ def extract_one(path, out_dir, subcap):
 # ---------------------------------------------------------------------------
 # 사이트별로 돌리기 — subcap 은 사이트 영상 수로 나눔, 사이트 총량은 SITE_CAP 로 캡
 # ---------------------------------------------------------------------------
+# 재실행 시 이전 결과가 섞이지 않게 bg 를 통째로 지우고 새로 만든다
+shutil.rmtree(f'{OUT_ROOT}/bg', ignore_errors=True)
 os.makedirs(OUT_ROOT, exist_ok=True)
 manifest = {'fps': FPS_EXTRACT, 'dedup_sim': DEDUP_SIM, 'site_cap': SITE_CAP, 'frames': []}
 yields = {}   # site -> kept
