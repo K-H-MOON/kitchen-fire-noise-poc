@@ -83,8 +83,35 @@ def n_steam(img, s):
     white = np.full_like(img, 235)
     return np.clip(img * (1 - mask[..., None]) + white * mask[..., None], 0, 255).astype(np.uint8)
 
+def n_contrast(img, s):                                    # 대비 낮추기 (CCTV 저대비 모사)
+    c = [1.0, 0.75, 0.58, 0.42, 0.30, 0.20][s]
+    if c >= 1.0:
+        return img
+    m = img.mean()
+    return np.clip((img.astype(np.float32) - m) * c + m, 0, 255).astype(np.uint8)
+
+def n_grayscale(img, s):                                   # 회색으로 섞기 (학습 안 됨→저하 볼 것)
+    f = [0.0, 0.3, 0.5, 0.7, 0.85, 1.0][s]
+    if f == 0:
+        return img
+    g = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)[..., None].astype(np.float32)
+    return np.clip(img * (1 - f) + g * f, 0, 255).astype(np.uint8)
+
+def n_erasing(img, s):                                     # 무작위 사각형 가림 (occlusion)
+    if s == 0:
+        return img
+    nb, frac = [(0, 0), (1, 0.10), (2, 0.15), (3, 0.20), (4, 0.28), (5, 0.35)][s]
+    H, W = img.shape[:2]
+    out = img.copy()
+    for _ in range(nb):
+        bw, bh = int(W * frac), int(H * frac)
+        x, y = rng.randint(0, max(1, W - bw)), rng.randint(0, max(1, H - bh))
+        out[y:y + bh, x:x + bw] = 128                      # 회색으로 지움
+    return out
+
 NOISE = {'gaussian': n_gaussian, 'jpeg': n_jpeg, 'motion_blur': n_motion,
-         'defocus': n_defocus, 'low_light': n_lowlight, 'steam': n_steam}
+         'defocus': n_defocus, 'low_light': n_lowlight, 'steam': n_steam,
+         'contrast': n_contrast, 'grayscale': n_grayscale, 'random_erasing': n_erasing}
 
 # ---------------------------------------------------------------------------
 # test 이미지 미리 적재 (RAM) — 반복 Drive 읽기 방지

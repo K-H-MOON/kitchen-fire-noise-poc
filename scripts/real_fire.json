@@ -1,0 +1,26 @@
+{
+ "note": "실제 화재 검증셋 인벤토리. **소재(스프라이트)로 쓰지 않은** 유류화재 영상에서만 뽑는다 — 그래야 '한 번도 안 본 실제 불'이 된다. 합성 아님(실제 장면 전체 프레임). 이미지 단위 검출률로 정직성 검증.",
+ "src_dir": "/content/drive/MyDrive/smoke_frames",
+ "fps": 2,
+ "why_unused": "스프라이트로 쓴 11개(tempura01·konro_ignite·ih_debris·grease_safety·grease_prev·dirty_pan·low_oil·clean_pan·dented_pan·reproduce·kyofu)는 제외. 아래는 그 밖의 실제 유류화재 영상.",
+ "sources": [
+  {"key": "jikken_douga", "file": "天ぷら油火災実験動画",       "fire_shots": [], "nofire_shots": [], "crop": null,
+   "_status": "불꽃 구간(fire_shots) + 발화 전 무불꽃 구간(nofire_shots)을 초로 채울 것"},
+  {"key": "simulation",   "file": "天ぷら油火災シミュレーション", "fire_shots": [], "nofire_shots": [], "crop": null,
+   "_status": "미확인"},
+  {"key": "tokyo_bousai", "file": "東京防災",                  "fire_shots": [], "nofire_shots": [], "crop": null,
+   "_status": "미확인 — 2 東京防災 天ぷら油火災実験.mp4"},
+  {"key": "kanetsu",      "file": "天ぷら油加熱発火実験",       "fire_shots": [], "nofire_shots": [], "crop": null,
+   "_status": "미확인 — 火災予防に関する実験　天ぷら油加熱発火実験.mp4"},
+  {"key": "grease_spread","file": "Test shows how quickly grease", "fire_shots": [], "nofire_shots": [], "crop": null,
+   "_status": "미확인 — 영어, grease fire 확산"},
+  {"key": "hisomu",       "file": "天ぷら油に潜む危険",         "fire_shots": [], "nofire_shots": [], "crop": null,
+   "_status": "미확인"}
+ ],
+ "_workflow": [
+  "1) 위 영상을 열어 불꽃이 뚜렷한 구간 → fire_shots [시작,끝](초), 발화 전(불 없음) 구간 → nofire_shots 에 채운다.",
+  "2) 5~6개 중 잘 나오는 3~4개만 골라도 됨. 목표 실제 불꽃 프레임 ≈100장.",
+  "3) colab_realfire_test.py 로 프레임 뽑고 학습된 모델로 검출률 측정.",
+  "   real_flame_rate(불 있음→검출, 높아야) · real_fp_rate(불 없음→검출, 낮아야)."
+ ]
+}
