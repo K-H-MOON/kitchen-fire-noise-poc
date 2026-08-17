@@ -16,7 +16,7 @@
 # Colab 새 노트북에 이 셀 하나. GPU 불필요.
 
 import os, glob, json, shutil, subprocess, unicodedata
-import numpy as np
+import numpy as np, cv2
 from PIL import Image, ImageDraw, ImageFont
 from google.colab import drive
 
@@ -49,17 +49,36 @@ def norm(s):
 
 
 # ---------------------------------------------------------------------------
-# 불꽃 알파 — 밝고 난색이면 불꽃. 백열(전 채널 밝음) 코어는 따로 살림.
+# 불꽃 알파 — 밝고 '난색' 이면 불꽃. 백열(전 채널 밝음) 코어는 따로 살림.
+#
+#   w0 (난색 하한) — 회색 배경(R≈B)은 warmth≈0 이 되게 해서 밝은 회색 벽·조리대가
+#     새지 않게 한다. 이게 밝은 배경 출처(grease_safety) 누출의 핵심 방지책.
+#   core0 을 높게 두어 벽이 백열로 오인되지 않게 한다. 불꽃 코어는 거의 포화(250+).
+#
+# 그다음 clean_alpha 로 흩어진 speckle·작은 글자(자막)를 연결요소로 제거한다.
 # ---------------------------------------------------------------------------
-def flame_alpha(img, v0, core0, thr):
+def flame_alpha(img, v0, core0, thr, w0):
     r, b = img[..., 0], img[..., 2]
     v = img.max(2)                                   # 휘도
-    warmth = np.clip((r - b) / 255.0, 0, 1)          # 오렌지·붉은 불꽃 (R 이 B 보다 큼)
+    warmth = np.clip(((r - b) / 255.0 - w0) / max(1.0 - w0, 1e-6), 0, 1)
     bright = np.clip((v - v0) / max(255.0 - v0, 1.0), 0, 1)
     core   = np.clip((img.min(2) - core0) / max(255.0 - core0, 1.0), 0, 1)  # 백열 코어
     a = np.clip(np.maximum(warmth * bright, core), 0, 1)
     a[a < thr] = 0
-    return a
+    return clean_alpha(a)
+
+
+def clean_alpha(a, min_frac=0.003):
+    """흩어진 speckle·작은 글자(자막)를 지운다 — 열고, 일정 면적 이상 연결요소만 남김."""
+    m = (a > 0).astype(np.uint8)
+    m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    n, lab, stats, _ = cv2.connectedComponentsWithStats(m, 8)
+    keep = np.zeros_like(m)
+    area_thr = min_frac * a.shape[0] * a.shape[1]
+    for i in range(1, n):
+        if stats[i, cv2.CC_STAT_AREA] >= area_thr:
+            keep[lab == i] = 1
+    return a * keep
 
 
 def frames_of(src, a, b, crop):
@@ -115,7 +134,7 @@ manifest, sheets, total, mismatch = {}, [], 0, []
 for s in ready:
     key, frag, shots, crop = s['key'], s['file'], s['shots'], s.get('crop')
     mp = {**MD, **(s.get('matte') or {})}             # 항목별 matte 로 덮어씀
-    v0, core0, thr = mp['v0'], mp['core0'], mp['thr']
+    v0, core0, thr, w0 = mp['v0'], mp['core0'], mp['thr'], mp['w0']
     pool = pool_of.get(key, 'unassigned')
 
     hit = [p for p in allf if norm(frag) in norm(os.path.basename(p))]
@@ -125,9 +144,11 @@ for s in ready:
     d = f'{OUT}/{pool}/{key}'; os.makedirs(d, exist_ok=True)
 
     recs, alphas = [], []
+    mid = (shots[0][0] + shots[0][1]) / 2                  # QC 시트용 대표 프레임 (첫 샷 중앙)
+    mid_cap = None
     for a, b in shots:
         for sec, img in frames_of(src, a, b, crop):
-            al = flame_alpha(img, v0, core0, thr)
+            al = flame_alpha(img, v0, core0, thr, w0)
             ys, xs = np.nonzero(al)
             if len(ys) == 0:
                 recs.append({'sec': sec, 'shot': [a, b], 'file': None, 'alpha_mean': 0.0,
@@ -135,14 +156,17 @@ for s in ready:
             y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
             rgba = np.dstack([img[y0:y1, x0:x1], (al[y0:y1, x0:x1] * 255)]).astype(np.uint8)
             name = f'{key}_{sec:07.1f}.png'.replace(' ', '0')
-            Image.fromarray(rgba, 'RGBA').save(f'{d}/{name}')
+            Image.fromarray(rgba).save(f'{d}/{name}')
             alphas.append(dhash(al))
             recs.append({'sec': sec, 'shot': [a, b], 'file': name,
                          'alpha_mean': round(float(al.mean()), 4),
                          'bbox': [int(x0), int(y0), int(x1), int(y1)],
                          'area_ratio': round(float((x1 - x0) * (y1 - y0)) / al.size, 4)})
-            if len(sheets) < 12 and abs(sec - (shots[0][0] + shots[0][1]) / 2) < 1.0:
-                sheets.append((key, sec, img, al))
+            # 출처당 한 장만 — 첫 샷 중앙에 가장 가까운 프레임
+            if mid_cap is None or abs(sec - mid) < mid_cap[0]:
+                mid_cap = (abs(sec - mid), sec, img, al)
+    if mid_cap and len(sheets) < 12:                      # 시트에 출처당 1줄
+        sheets.append((key, mid_cap[1], mid_cap[2], mid_cap[3]))
 
     n = sum(1 for r in recs if r.get('file'))
     total += n

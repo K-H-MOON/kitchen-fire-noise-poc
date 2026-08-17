@@ -4,9 +4,10 @@
  "src_note": "원본 유류화재 영상은 연기 프로젝트가 이미 모아 둔 것을 재사용한다(원본 재사용은 누수가 아님). 파일명 조각(file)으로 그 폴더에서 영상을 찾는다.",
  "matte_default": {
   "v0": 70,
-  "core0": 190,
+  "core0": 230,
   "thr": 0.12,
-  "_help": "v0=휘도 하한, core0=백열 코어(전 채널 밝음) 하한, thr=이 아래 알파는 0. 출처마다 배경·노출이 달라 QC 시트를 보고 항목별 matte 로 덮어쓴다."
+  "w0": 0.06,
+  "_help": "v0=휘도 하한, core0=백열 코어(전 채널 밝음) 하한, thr=이 아래 알파는 0, w0=난색 하한(회색 배경이 안 새게). 출처마다 배경·노출이 달라 QC 시트를 보고 항목별 matte 로 덮어쓴다."
  },
  "sources": [
   {"key": "tempura01",  "file": "天ぷら油火災が発生するまで", "shots": [[172, 199]], "crop": null, "matte": null,
@@ -15,8 +16,8 @@
    "_note": "2:05–2:15"},
   {"key": "grease_prev",   "file": "Fire Prevention Week",      "shots": [[49, 58]], "crop": null, "matte": null,
    "_note": "0:49–0:58"},
-  {"key": "dirty_pan",  "file": "汚れた鍋",               "shots": [[52, 58]], "crop": null, "matte": null,
-   "_note": "【事故再現】ガスこんろ「3.…（汚れた鍋）」. 0:52–0:58"},
+  {"key": "dirty_pan",  "file": "汚れた鍋",               "shots": [[52, 58]], "crop": [0.05, 0.15], "matte": null,
+   "_note": "【事故再現】ガスこんろ「3.…（汚れた鍋）」. 0:52–0:58. crop=상5%·하15% — 자막·워터마크 잘라냄"},
   {"key": "kyofu",      "file": "恐怖！天ぷら鍋火災",       "shots": [], "crop": null, "matte": null,
    "_excluded": "발화 장면에 자막이 들어가거나 사람이 앵글에 함께 잡혀 부적합. shots 비움 → 배정·추출에서 자동 제외."},
   {"key": "low_oil",    "file": "少ない油で発火",          "shots": [[49, 57]], "crop": null, "matte": null,
