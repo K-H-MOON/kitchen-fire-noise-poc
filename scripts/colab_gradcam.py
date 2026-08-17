@@ -18,7 +18,12 @@ import os, glob, random
 import numpy as np, cv2, torch
 from PIL import Image, ImageDraw, ImageFont
 from google.colab import drive
-from ultralytics import YOLO
+try:
+    from ultralytics import YOLO
+except ImportError:
+    import subprocess, sys
+    subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'ultralytics'], check=True)
+    from ultralytics import YOLO
 
 FIRE = '/content/drive/MyDrive/fire_frames'
 BEST = f'{FIRE}/runs/fire_s/best.pt'

@@ -18,7 +18,12 @@ import os, glob, json, shutil, subprocess, unicodedata
 import numpy as np, cv2
 from PIL import Image, ImageDraw, ImageFont
 from google.colab import drive
-from ultralytics import YOLO
+try:
+    from ultralytics import YOLO
+except ImportError:
+    import subprocess, sys
+    subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'ultralytics'], check=True)
+    from ultralytics import YOLO
 
 REPO = '/content/kitchen-fire-noise-poc/scripts'
 FIRE = '/content/drive/MyDrive/fire_frames'
