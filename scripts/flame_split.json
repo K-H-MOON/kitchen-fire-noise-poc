@@ -1,25 +1,23 @@
 {
  "unit": "flame_source",
- "seed": 7,
- "test_frac": 0.3,
- "note": "불꽃 출처를 풀로 분리. 같은 출처의 매트는 한 풀로만. 합성 때 배경 세트와 풀을 맞춘다.",
+ "note": "불꽃 출처를 풀로 분리(지정). 같은 출처의 매트는 한 풀로만. 합성 때 배경 세트와 풀을 맞춘다.",
  "pools": {
   "train": [
-   "dented_pan",
    "dirty_pan",
-   "grease_safety",
-   "ih_debris",
    "konro_ignite",
    "low_oil",
+   "reproduce",
    "tempura01"
   ],
   "test": [
    "clean_pan",
-   "grease_prev",
-   "reproduce"
+   "grease_prev"
   ]
  },
- "pending": [
+ "excluded": [
+  "dented_pan",
+  "grease_safety",
+  "ih_debris",
   "kyofu"
  ]
 }

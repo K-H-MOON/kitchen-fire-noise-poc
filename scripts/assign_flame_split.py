@@ -4,20 +4,21 @@
 # 불꽃 모양을 외운다. 그래서 **출처 단위**로 풀을 나눈다 — 한 출처에서 나온 매트는
 # 전부 같은 풀로만 간다.
 #
-# 배경(주방) 분할과 다른 축이다. 최종 합성은 (배경 세트) × (불꽃 풀) 로 조합되며,
-# train 합성 = train 배경 + train 불꽃, test 합성 = test 배경 + test 불꽃 이 되도록
-# 합성 스크립트에서 맞춘다.
+# 왜 무작위가 아니라 지정 배정인가 — 통과한 불꽃 출처가 7개뿐이라 시드 무작위는
+# 쉽게 치우친다(실제로 시드 7 은 가장 약한 두 소재를 test 에 몰았다). 배경 사이트를
+# 지정 배정한 것과 같은 방식으로, test 에 **잘 형성됐고 train 과 구별되는** 불꽃을
+# 넣는다. 쉬운 것을 고르는 게 아니라 *구별되는* 것을 고른다 — 일반화를 재기 위함.
 #
-# 시드 고정 단순 무작위. 표준 라이브러리만. val 은 따로 두지 않는다 — 불꽃 소재 수가
-# 적어 train/test 두 풀로만 나눈다(임계값 튜닝은 배경 val 로 한다).
+# 배정 근거:
+#   test  clean_pan   — 어두운 벽 배경의 강한 세로 불꽃. 형태가 뚜렷.
+#         grease_prev — 구리팬·붉은 전열코일 세팅. train 의 냄비·가스레인지와 구별됨.
+#   train 나머지 5개 (tempura01·konro_ignite·reproduce·low_oil·dirty_pan).
 #
-# 주의 — flames.json 의 shots 가 채워진(=실제로 쓸) 출처만 배정한다. shots 가 빈
-# 출처는 아직 불꽃 구간을 확인하지 않은 것이므로 제외하고, 경고로 알린다.
+# shots 가 빈(=제외된) 출처는 배정하지 않는다. 표준 라이브러리만.
 
 import json
 import os
 import sys
-from random import Random
 
 try:
     sys.stdout.reconfigure(encoding='utf-8')
@@ -28,45 +29,47 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FLAMES = os.path.join(HERE, 'flames.json')
 OUT = os.path.join(HERE, 'flame_split.json')
 
-TEST_FRAC = 0.30    # 출처의 약 30% 를 test 풀로
-SEED = 7
+# 지정 배정 — 통과한 7개 출처만. 근거는 위 주석.
+POOL = {
+    'clean_pan':    'test',
+    'grease_prev':  'test',
+    'tempura01':    'train',
+    'konro_ignite': 'train',
+    'reproduce':    'train',
+    'low_oil':      'train',
+    'dirty_pan':    'train',
+}
 
 inv = json.load(open(FLAMES, encoding='utf-8'))
-ready = [s['key'] for s in inv['sources'] if s.get('shots')]      # shots 채워진 것만
-pending = [s['key'] for s in inv['sources'] if not s.get('shots')]
+ready = sorted(s['key'] for s in inv['sources'] if s.get('shots'))
+excluded = sorted(s['key'] for s in inv['sources'] if not s.get('shots'))
 
-print('=' * 66)
-print('불꽃 출처 → train / test 풀 배정 (출처 단위)')
-print('=' * 66)
-if pending:
-    print(f'  [대기] shots 미확인 {len(pending)}개 — 배정에서 제외:')
-    print(f'         {" · ".join(pending)}')
-print(f'  배정 대상(shots 확인됨) {len(ready)}개')
+# ---------------------------------------------------------------------------
+# 검산 — 배정이 '통과한 출처' 와 정확히 맞물리는가
+# ---------------------------------------------------------------------------
+assert set(POOL) == set(ready), (
+    f'배정과 통과 출처가 다름\n'
+    f'  통과인데 배정 없음: {set(ready) - set(POOL)}\n'
+    f'  배정했는데 통과 아님: {set(POOL) - set(ready)}')
 
-if not ready:
-    print('\n  아직 불꽃 구간이 확정된 출처가 없음 — flames.json 의 shots 를 먼저 채울 것.')
-    print('  (지금은 배정할 것이 없어 flame_split.json 을 쓰지 않음)')
-    raise SystemExit(0)
-
-n_test = max(1, round(len(ready) * TEST_FRAC))
-test = sorted(Random(SEED).sample(ready, n_test))
-train = sorted(set(ready) - set(test))
-
-# 검산 — 겹치지 않고 합이 전체
+train = sorted(k for k, v in POOL.items() if v == 'train')
+test = sorted(k for k, v in POOL.items() if v == 'test')
 assert set(train) & set(test) == set(), '풀이 겹침'
-assert set(train) | set(test) == set(ready), '빠진 출처가 있음'
 
-print(f'\n  시드 {SEED} · test 비율 {TEST_FRAC:.0%}')
-print(f'  train 풀 {len(train)}개  {" · ".join(train)}')
+print('=' * 66)
+print('불꽃 출처 → train / test 풀 배정 (출처 단위, 지정)')
+print('=' * 66)
+if excluded:
+    print(f'  [제외] shots 비어 배정 안 함 {len(excluded)}개: {" · ".join(excluded)}')
+print(f'  통과 출처 {len(ready)}개')
+print(f'\n  train 풀 {len(train)}개  {" · ".join(train)}')
 print(f'  test  풀 {len(test)}개  {" · ".join(test)}')
 
 out = {
     'unit': 'flame_source',
-    'seed': SEED,
-    'test_frac': TEST_FRAC,
-    'note': '불꽃 출처를 풀로 분리. 같은 출처의 매트는 한 풀로만. 합성 때 배경 세트와 풀을 맞춘다.',
+    'note': '불꽃 출처를 풀로 분리(지정). 같은 출처의 매트는 한 풀로만. 합성 때 배경 세트와 풀을 맞춘다.',
     'pools': {'train': train, 'test': test},
-    'pending': pending,
+    'excluded': excluded,
 }
 json.dump(out, open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print(f'\n-> {os.path.basename(OUT)}')
