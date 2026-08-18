@@ -58,13 +58,17 @@ def norm(s):
 # 그다음 clean_alpha 로 흩어진 speckle·작은 글자(자막)를 연결요소로 제거한다.
 # ---------------------------------------------------------------------------
 def flame_alpha(img, v0, core0, thr, w0):
-    r, b = img[..., 0], img[..., 2]
+    r, g, b = img[..., 0], img[..., 1], img[..., 2]
     v = img.max(2)                                   # 휘도
     warmth = np.clip(((r - b) / 255.0 - w0) / max(1.0 - w0, 1e-6), 0, 1)
     bright = np.clip((v - v0) / max(255.0 - v0, 1.0), 0, 1)
     core   = np.clip((img.min(2) - core0) / max(255.0 - core0, 1.0), 0, 1)  # 백열 코어
     a = np.clip(np.maximum(warmth * bright, core), 0, 1)
     a[a < thr] = 0
+    # 순수 빨강 제거 — 빨간 LED 시계·온도 표시는 R 만 높고 G·B 가 거의 0. 불꽃은
+    # 주황·노랑이라 G 가 어느 정도 있다. 이 조합이면 LED 빨강만 지우고 불꽃은 안 상함.
+    # (konro_ignite 등 札幌 시리즈의 타이머 오염을 막는다)
+    a[(r > 130) & (g < 55) & (b < 55)] = 0
     return clean_alpha(a)
 
 
