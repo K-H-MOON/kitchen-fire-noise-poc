@@ -62,5 +62,5 @@ from google.colab import drive; drive.mount('/content/drive')   # seochorobotics
 - 학습: colab_train.py(단일) · **colab_phaseB_train.py**(15회 오케스트레이션)
 - 검증: colab_gradcam.py(판정불가) · **colab_ablation.py**(결정적)
 - 노이즈: **noise_lib.py**(단일소스) · colab_noise_curve.py(Phase A 미리보기) · **colab_phaseB_eval.py**(CI 집계)
-- 실제화재: real_fire.json(shots 대기) · colab_realfire_test.py
+- 실제화재: real_fire.json(shots 대기) · **colab_realfire_annotate.py**(구간 주석용 컨택트 시트, CPU) · colab_realfire_test.py
 - 문서: PREREGISTER.md · TIMELINE.md · HANDOFF.md(이 파일)
