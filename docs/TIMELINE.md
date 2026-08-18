@@ -138,13 +138,19 @@
 - 설계 확정: **A→B 순차**, 3 config × 5 seed(±CI). baseline / modelA(9개 전부 증강,
   in-distribution 상한) / modelB(화질6 증강, **steam·grayscale·random_erasing held-out**
   = 일반화). 오프라인 증강, resumable. `colab_phaseB_train.py`.
+- **공정성 실측 확인 (2026-08-18)**: 모든 config 를 2× 로 맞추려 baseline 은 train
+  경로를 두 번(`[train/images, train/images]`) 넣는데, ultralytics(8.4.121)가 중복
+  제거 없이 실어 **baseline train = 4556장(=2278×2)** 임을 학습 로그로 확인. baseline 이
+  1× 로 줄지 않으므로 modelA/B 와 **동일 데이터량**. → 증강 효과를 데이터량과 분리해
+  읽을 수 있음(결론이 "데이터가 많아서"가 아님을 받치는 근거).
 - (결과 채우기: 저하 곡선이 회복되는가 / held-out 노이즈에도 일반화되는가)
 
 ### 실제 화재 검증 — 정직성 (셋 확정, 실행 대기)
 - 소재로 **안 쓴** 유류화재 영상에서 실제 불꽃 프레임(합성 아님)으로 이미지단위
   검출률. `real_fire.json` · `colab_realfire_test.py`.
 - **셋 확정**: 5개 영상 채움(불꽃 ~406장), simulation 배제, BEST=v8_baseline_s1.
-  실행 남은 전제 = ① v8 완주 ② smoke_frames 를 seochorobotics 에 공유+바로가기.
+  smoke_frames 를 seochorobotics 에 공유+바로가기, Colab 접근 확인(59 mp4). →
+  **실행 남은 전제 = v8 완주뿐**(그 뒤 seochorobotics GPU 에서 실행만).
 - (결과 채우기: real_flame_rate — 합성 학습이 실전 불에 전이되는가)
 
 ### YOLO11 감도 확인 — Level 2 (예정)
