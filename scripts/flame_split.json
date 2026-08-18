@@ -4,7 +4,6 @@
  "pools": {
   "train": [
    "dirty_pan",
-   "konro_ignite",
    "low_oil",
    "reproduce",
    "tempura01"
@@ -18,6 +17,7 @@
   "dented_pan",
   "grease_safety",
   "ih_debris",
+  "konro_ignite",
   "kyofu"
  ]
 }

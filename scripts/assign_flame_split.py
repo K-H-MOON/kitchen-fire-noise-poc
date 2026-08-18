@@ -12,7 +12,7 @@
 # 배정 근거:
 #   test  clean_pan   — 어두운 벽 배경의 강한 세로 불꽃. 형태가 뚜렷.
 #         grease_prev — 구리팬·붉은 전열코일 세팅. train 의 냄비·가스레인지와 구별됨.
-#   train 나머지 5개 (tempura01·konro_ignite·reproduce·low_oil·dirty_pan).
+#   train 나머지 4개 (tempura01·reproduce·low_oil·dirty_pan). konro_ignite 는 오염 탈락.
 #
 # shots 가 빈(=제외된) 출처는 배정하지 않는다. 표준 라이브러리만.
 
@@ -29,12 +29,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FLAMES = os.path.join(HERE, 'flames.json')
 OUT = os.path.join(HERE, 'flame_split.json')
 
-# 지정 배정 — 통과한 7개 출처만. 근거는 위 주석.
+# 지정 배정 — 통과한 6개 출처만. 근거는 위 주석.
+# konro_ignite 는 빨간 LED 타이머 오염(불꽃까지 빨강이라 색 구별 불가)으로 탈락 —
+# 자세한 사유는 flames.json 의 konro_ignite _excluded 와 docs/TIMELINE.md.
 POOL = {
     'clean_pan':    'test',
     'grease_prev':  'test',
     'tempura01':    'train',
-    'konro_ignite': 'train',
     'reproduce':    'train',
     'low_oil':      'train',
     'dirty_pan':    'train',
