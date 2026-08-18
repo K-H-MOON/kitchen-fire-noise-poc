@@ -3,7 +3,9 @@
 > 컨텍스트가 차서 세션을 넘김. 이 문서 + 자동 메모리로 바로 이어갈 수 있게 정리.
 
 ## 한 줄 상황
-konro_ignite 오염(빨간 LED 타이머) 제거 후 **깨끗한 데이터로 Phase B 학습(v8 15회)이 진행 중** (대략 2~3/15, baseline 구간). 끝나면 v11 미러링(15회) → 평가(CI) → 실제화재 검증 → ablation 재검증.
+konro_ignite 오염(빨간 LED 타이머) 제거 후 **깨끗한 데이터로 Phase B 학습(v8 15회)이 진행 중** (대략 3/15, baseline 구간). 끝나면 v11 미러링(15회) → 평가(CI) → 실제화재 검증 → ablation 재검증.
+
+**실제화재 검증 준비는 학습과 병행해 완료(2026-08-18)**: BEST 경로 수정(ablation·realfire → v8_baseline_s1), 구간 주석 도구 추가, real_fire.json shots 채움(5개, simulation 애니오염 배제), smoke_frames 를 seochorobotics 에 공유+바로가기·Colab 접근 확인(59 mp4). → **realfire 는 학습 완주 후 실행만 남음.** 상세는 docs/TIMELINE.md.
 
 ## 프로젝트
 - GitHub **K-H-MOON/kitchen-fire-noise-poc**. 목표: 급식실 배경 + 실제 유류화재 불꽃을 **합성**해 학습 → ① 화재 인식하나 ② 노이즈에 강건한가(+극복).
@@ -26,8 +28,8 @@ konro_ignite 오염(빨간 LED 타이머) 제거 후 **깨끗한 데이터로 Ph
 1. **v8 15회 완주** — resumable. 끊기면 셀 재실행(완료분 skip). `runs_phaseB/`에 저장.
 2. **v11 15회**: `!sed -i "s/yolov8s.pt/yolo11s.pt/" /content/kitchen-fire-noise-poc/scripts/colab_phaseB_train.py` 후 재실행. (증강셋은 아키텍처 무관, 재사용)
 3. **평가**: `colab_phaseB_eval.py` → config별 seed평균±CI 곡선(flame_rate·fp_rate, held-out 표시). 증분이라 모델 쌓이면 언제든.
-4. **실제화재 검증**: `scripts/real_fire.json`의 6후보 영상(소재 미사용)을 사용자가 열어 fire_shots·nofire_shots 초 채움 → `colab_realfire_test.py`.
-5. **ablation 재검증**: 깨끗한 baseline 모델로 `colab_ablation.py` 재실행 (구 ablation은 오염 기반). BEST 경로를 phaseB baseline으로 조정 필요.
+4. **실제화재 검증**: 준비 완료(shots 5개 채움·simulation 배제·BEST=v8_baseline_s1·smoke_frames 접근 확인). **학습 완주 후 `colab_realfire_test.py` 실행만** 하면 됨(seochorobotics, GPU). 경계는 시트 근사라 원하면 웹 플레이어로 재조정 가능.
+5. **ablation 재검증**: 깨끗한 baseline 모델로 `colab_ablation.py` 재실행. **BEST 경로는 v8_baseline_s1 로 이미 수정됨**(BEST_MODEL 변수). 학습 완주 후 실행.
 6. **결과 채우기**: docs/TIMELINE.md "남은 것" 자리 → 최종 결론 문서(README, kitchen-fire-poc 형식).
 
 ## Colab 재개 (새 런타임마다)
