@@ -27,7 +27,10 @@ except ImportError:
 
 REPO = '/content/kitchen-fire-noise-poc/scripts'
 FIRE = '/content/drive/MyDrive/fire_frames'
-BEST = f'{FIRE}/runs/fire_s/best.pt'
+# 깨끗한 Phase B baseline 으로 검증 (구 runs/fire_s 는 konro LED 오염 시절 산출물).
+# 다른 모델로 보려면 BEST_MODEL 만 바꾼다 (예: 'v8_modelA_s1').
+BEST_MODEL = 'v8_baseline_s1'
+BEST = f'{FIRE}/runs_phaseB/{BEST_MODEL}/best.pt'
 OUT  = f'{FIRE}/realfire'
 CONF = 0.25
 
