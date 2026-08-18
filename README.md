@@ -26,14 +26,16 @@
 |------|------|:---:|
 | 0. 영상 인벤토리 | `scripts/videos.json` (28영상·13사이트) | ✅ |
 | 1. 사이트 분할 (사전 등록) | `scripts/assign_split.py` → `split.json` | ✅ |
-| 2. 배경 프레임 추출 | `scripts/colab_extract_frames.py` | ▶ Colab 실행 |
-| 3a. 불꽃 소재 인벤토리 | `scripts/flames.json` | ◐ 불꽃 구간 채우는 중 |
-| 3b. 불꽃 풀 배정 | `scripts/assign_flame_split.py` → `flame_split.json` | ⬜ (3a 후) |
-| 3c. 불꽃 매트 추출 | `scripts/colab_extract_flames.py` | ⬜ (3a 후, Colab) |
-| 4. 불꽃 합성 + 자동 박스 | (예정) | ⬜ |
-| 5. 학습 (YOLO) | (예정) | ⬜ |
-| 6. 노이즈 저하 곡선 (Phase A) | (예정) | ⬜ |
-| 7. 노이즈 증강 극복 (Phase B) | (예정) | ⬜ |
+| 2. 배경 프레임 추출 | `scripts/colab_extract_frames.py` | ✅ (2,881장) |
+| 3a. 불꽃 소재 인벤토리 | `scripts/flames.json` | ✅ |
+| 3b. 불꽃 풀 배정 | `scripts/assign_flame_split.py` → `flame_split.json` | ✅ |
+| 3c. 불꽃 매트 추출 | `scripts/colab_extract_flames.py` | ✅ (konro 오염 제외) |
+| 4. 불꽃 합성 + 자동 박스 | `scripts/colab_synth.py` | ✅ (2,278/294/309) |
+| 5. 학습 (YOLO) | `scripts/colab_train.py` · `colab_phaseB_train.py` | ▶ v8 진행 중 |
+| 5.6 불꽃 제거 검증 — 불꽃을 지우면 검출도 사라지나 (배경이 아닌 **불 자체**를 보는지·핵심) | `scripts/colab_ablation.py` | ◐ 깨끗한 데이터로 재검증 대기 |
+| 6. 노이즈 저하 곡선 (Phase A) | `scripts/colab_noise_curve.py` | ◐ 미리보기 완료(재확인 대상) |
+| 6b. 노이즈 증강 극복 (Phase B) | `scripts/colab_phaseB_train.py` · `colab_phaseB_eval.py` | ▶ 진행 중 |
+| 7. 실제 화재 검증 — 합성이 실전 불에 전이되나 (정직성) | `scripts/colab_realfire_test.py` | ◐ 준비완료·학습 후 실행 |
 
 확정한 설계·근거는 **[docs/PREREGISTER.md](docs/PREREGISTER.md)** 에 있다.
 
