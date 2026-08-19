@@ -25,6 +25,8 @@ RUNS = f'{FIRE}/runs_phaseB'
 OUT  = f'{FIRE}/phaseB_eval'
 CONF = 0.25
 TEST_RNG_SEED = 777
+BATCH = 32                                      # 배치 추론 크기 (GPU 활용 · 결과 불변)
+VERIFY = os.environ.get('PHASEB_VERIFY') or None  # 예: 'v11_baseline_s1' → 배치=한장씩 등가 검증만 하고 종료
 CONFIG_ORDER = ['baseline', 'modelA', 'modelB']
 T95 = {1: 12.71, 2: 4.30, 3: 3.18, 4: 2.78, 5: 2.57, 6: 2.45, 7: 2.36, 8: 2.31, 9: 2.26}
 
@@ -71,9 +73,13 @@ print(f'모델 {len(models)}개 발견')
 def curve_for(best):
     model = YOLO(best)
 
-    def det(rgb):
-        r = model.predict(rgb[..., ::-1], conf=CONF, verbose=False)[0]
-        return len(r.boxes) > 0
+    def det_batch(imgs):                                 # imgs: RGB uint8 리스트 → 검출여부 리스트
+        out = []
+        for i in range(0, len(imgs), BATCH):
+            chunk = [im[..., ::-1] for im in imgs[i:i + BATCH]]   # RGB→BGR (한장씩 det 와 동일)
+            for r in model.predict(chunk, conf=CONF, verbose=False):
+                out.append(len(r.boxes) > 0)
+        return out
 
     res = {}
     for nm in NL.ALL9:
@@ -81,10 +87,45 @@ def curve_for(best):
         rng = np.random.RandomState(TEST_RNG_SEED)      # 모든 모델 동일 실현
         fr, fp = [], []
         for s in NL.SEVS:
-            fr.append(float(np.mean([det(fn(im, s, rng)) for im in POS])))
-            fp.append(float(np.mean([det(fn(im, s, rng)) for im in NEG])))
+            # rng 소비 순서(POS→NEG)를 한장씩 버전과 동일하게 유지 → 노이즈 실현 동일
+            pos_noised = [fn(im, s, rng) for im in POS]
+            neg_noised = [fn(im, s, rng) for im in NEG]
+            fr.append(float(np.mean(det_batch(pos_noised))))
+            fp.append(float(np.mean(det_batch(neg_noised))))
         res[nm] = {'flame': fr, 'fp': fp}
     return res
+
+# ---------------------------------------------------------------------------
+# 등가성 검증 (PHASEB_VERIFY 설정 시) — 배치 재계산 vs 캐시(한장씩) 대조 후 종료
+#   캐시 미변경 · 집계/그래프 미실행. 한 장씩으로 이미 캐시된 모델에만 씀.
+# ---------------------------------------------------------------------------
+if VERIFY:
+    m = next((x for x in models if x['name'] == VERIFY), None)
+    if m is None:
+        raise SystemExit(f'[VERIFY] 대상 {VERIFY} 를 runs_phaseB 에서 못 찾음')
+    cache = f'{RUNS}/{VERIFY}/noise_eval.json'
+    if not os.path.exists(cache):
+        raise SystemExit(f'[VERIFY] {cache} 없음 — 한장씩(구코드) 캐시가 있어야 대조 가능')
+    old = json.load(open(cache))
+    print(f'[VERIFY] {VERIFY}: 배치 재계산 후 캐시(한장씩)와 대조 (캐시 미변경) ...')
+    new = curve_for(m['best'])
+    maxdiff, nmis, total = 0.0, 0, 0
+    for nm in NL.ALL9:
+        for metric in ('flame', 'fp'):
+            a, b = np.array(old[nm][metric]), np.array(new[nm][metric])
+            d = np.abs(a - b)
+            maxdiff = max(maxdiff, float(d.max())); nmis += int((d > 1e-9).sum()); total += d.size
+    print(f'[VERIFY] 최대 절대차 {maxdiff:.6g} · 불일치 항목 {nmis}/{total}')
+    if nmis == 0:
+        print('[VERIFY] PASS — 배치 = 한장씩 완전 일치. s1/s2 캐시 유지하고 메인 eval 진행 가능.')
+    else:
+        print('[VERIFY] 불일치 발견 — B(30개 전부 배치 재실행) 권장. 어긋난 항목:')
+        for nm in NL.ALL9:
+            for metric in ('flame', 'fp'):
+                a, b = np.array(old[nm][metric]), np.array(new[nm][metric])
+                if np.abs(a - b).max() > 1e-9:
+                    print(f'   {nm}/{metric}: old={a.tolist()} new={b.tolist()}')
+    raise SystemExit(0)
 
 per_model = {}
 for m in models:
