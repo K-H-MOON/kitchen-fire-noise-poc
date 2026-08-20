@@ -39,6 +39,10 @@
 
 > **노이즈 9종** (`noise_lib.py`, 강도 0→5): 화질계 6 — gaussian(가우시안)·jpeg(압축)·motion_blur(모션블러)·defocus(초점흐림)·low_light(저조도)·contrast(대비); 그 외 3 — steam(수증기)·grayscale(흑백)·random_erasing(무작위 가림). **6번**은 9종 전부에 저하 곡선을 그리고, **6b**는 modelA(9종 전부 증강)·modelB(화질 6종만 증강 + steam·grayscale·random_erasing을 held-out으로 일반화 검증)로 나눔.
 
+![노이즈 9종 × 강도 예시](docs/img/noise_grid.jpg)
+
+*합성 화재 이미지 한 장에 노이즈 9종을 강도 0·2·4·5로 적용한 예시. 아래 3종(steam·grayscale·random_erasing)은 modelB 학습에서 뺀(held-out) 일반화 시험용.*
+
 > **Level 2 (아키텍처 감도)**: 위 5·5.6·6·6b·7을 YOLO8s로 한 바퀴 → 동일 프로토콜을 YOLO11s로 미러링(각 15회) → 결론이 아키텍처에 견고한지 CI로 교차검증. (LONO는 결과 보고 조건부.)
 
 확정한 설계·근거는 **[docs/PREREGISTER.md](docs/PREREGISTER.md)** 에 있음.
