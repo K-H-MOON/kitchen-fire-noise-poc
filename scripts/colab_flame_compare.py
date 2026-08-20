@@ -75,27 +75,42 @@ panelA = square_crop(imgA, (int((cx - bw / 2) * w), int((cy - bh / 2) * h),
                             int((cx + bw / 2) * w), int((cy + bh / 2) * h)), pad=0.35)
 print('A synth:', os.path.basename(sample))
 
-# --- B: 실제 유류 불꽃 (realfire 프레임에서 주황 영역 자동 검출) ---
+# --- B: 실제 유류 불꽃 (fire_shots 프레임들 중 불꽃 가장 큰 순간 자동 선택 + 크롭) ---
 def norm(s):
     return unicodedata.normalize('NFC', s)
+def warm(im):                                  # 주황·고온 마스크 (얇은 자막 글자는 open 으로 제거)
+    R, G, Bl = im[..., 0].astype(int), im[..., 1].astype(int), im[..., 2].astype(int)
+    m = (((R > 160) & (R > Bl + 55) & ((R + G + Bl) > 340)).astype(np.uint8)) * 255
+    return cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((9, 9), np.uint8))
 inv = json.load(open(f'{REPO}/real_fire.json', encoding='utf-8'))
-key = os.environ.get('RF_VIDEO', 'jikken_douga')
+key = os.environ.get('RF_VIDEO', 'grease_spread')      # 불꽃 크고 주황 자막 없는 기본
 rec = next(s for s in inv['sources'] if s['key'] == key)
 vid = [p for p in glob.glob(f"{inv['src_dir']}/*") if norm(rec['file']) in norm(os.path.basename(p))][0]
-a, b = rec['fire_shots'][0]; sec = (a + b) // 2
-tmp = '/content/_fc'; shutil.rmtree(tmp, ignore_errors=True); os.makedirs(tmp)
-subprocess.run(['ffmpeg', '-v', 'error', '-ss', str(sec), '-i', vid, '-frames:v', '1', f'{tmp}/f.jpg'], check=False)
-imgB = cv2.cvtColor(cv2.imread(f'{tmp}/f.jpg'), cv2.COLOR_BGR2RGB)
-R, G, Bl = imgB[..., 0].astype(int), imgB[..., 1].astype(int), imgB[..., 2].astype(int)
-mask = (((R > 150) & (R > Bl + 50) & ((R + G + Bl) > 300)).astype(np.uint8)) * 255
-cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-if cnts:
-    x, y, ww, hh = cv2.boundingRect(max(cnts, key=cv2.contourArea))
+tmp = '/content/_fc'
+best = None                                    # (area, frame_rgb, (x,y,w,h), sec) — 불꽃 가장 큰 프레임
+for a, b in rec['fire_shots']:
+    shutil.rmtree(tmp, ignore_errors=True); os.makedirs(tmp)
+    subprocess.run(['ffmpeg', '-v', 'error', '-ss', str(a), '-i', vid, '-t', str(b - a + 1),
+                    '-vf', 'fps=1', '-q:v', '2', f'{tmp}/%03d.jpg'], check=False)
+    for i, fp in enumerate(sorted(glob.glob(f'{tmp}/*.jpg'))):
+        im = cv2.cvtColor(cv2.imread(fp), cv2.COLOR_BGR2RGB)
+        cnts, _ = cv2.findContours(warm(im), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if not cnts:
+            continue
+        c = max(cnts, key=cv2.contourArea); ar = cv2.contourArea(c)
+        if best is None or ar > best[0]:
+            best = (ar, im, cv2.boundingRect(c), int(a) + i)
+if best:
+    _, imgB, (x, y, ww, hh), secB = best
     boxB = (x, y, x + ww, y + hh)
-else:                                          # 못 찾으면 중앙 크롭
-    hh, ww = imgB.shape[:2]; boxB = (ww // 4, hh // 4, ww * 3 // 4, hh * 3 // 4)
-panelB = square_crop(imgB, boxB, pad=0.4)
-print(f'B realfire: {key} @ {sec}s')
+else:                                          # 못 찾으면 첫 shot 중앙
+    a, b = rec['fire_shots'][0]; secB = (a + b) // 2
+    shutil.rmtree(tmp, ignore_errors=True); os.makedirs(tmp)
+    subprocess.run(['ffmpeg', '-v', 'error', '-ss', str(secB), '-i', vid, '-frames:v', '1', f'{tmp}/f.jpg'], check=False)
+    imgB = cv2.cvtColor(cv2.imread(f'{tmp}/f.jpg'), cv2.COLOR_BGR2RGB)
+    H2, W2 = imgB.shape[:2]; boxB = (W2 // 4, H2 // 4, W2 * 3 // 4, H2 * 3 // 4)
+panelB = square_crop(imgB, boxB, pad=0.5)
+print(f'B realfire: {key} @ {secB}s (flame area {int(best[0]) if best else 0})')
 
 # --- C: 아틀라스 스프라이트 (FLAME_ATLAS 지정 시) ---
 panels = [('합성 — 플랫 컷아웃', panelA, (185, 70, 0)),
