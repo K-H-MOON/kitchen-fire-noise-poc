@@ -28,10 +28,11 @@ except ImportError:
 REPO = '/content/kitchen-fire-noise-poc/scripts'
 FIRE = '/content/drive/MyDrive/fire_frames'
 # 깨끗한 Phase B baseline 으로 검증 (구 runs/fire_s 는 konro LED 오염 시절 산출물).
-# 다른 모델로 보려면 BEST_MODEL 만 바꾼다 (예: 'v8_modelA_s1').
-BEST_MODEL = 'v8_baseline_s1'
+# 다른 모델로 보려면 REALFIRE_MODEL 환경변수로 지정 (예: os.environ['REALFIRE_MODEL']='v8_modelA_s1').
+BEST_MODEL = os.environ.get('REALFIRE_MODEL') or 'v8_baseline_s1'
 BEST = f'{FIRE}/runs_phaseB/{BEST_MODEL}/best.pt'
-OUT  = f'{FIRE}/realfire'
+# baseline 은 기존 경로 유지, 그 외 모델은 별도 폴더로 분리 (baseline realfire.json 덮어쓰기 방지).
+OUT  = f'{FIRE}/realfire' if BEST_MODEL == 'v8_baseline_s1' else f'{FIRE}/realfire_{BEST_MODEL}'
 CONF = 0.25
 
 drive.mount('/content/drive')
@@ -76,7 +77,8 @@ except Exception:
     F = ImageFont.load_default()
 
 print('=' * 66)
-print('실제 화재 검증 (합성 아님 · 소재 미사용 영상)')
+print(f'실제 화재 검증 (합성 아님 · 소재 미사용 영상) · 모델 {BEST_MODEL}')
+print(f'출력 -> {OUT}')
 print('=' * 66)
 
 fire_det = fire_tot = nof_det = nof_tot = 0
