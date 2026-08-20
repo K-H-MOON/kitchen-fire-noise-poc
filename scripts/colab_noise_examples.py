@@ -54,6 +54,30 @@ def font(sz):
     except TypeError:
         return ImageFont.load_default()
 
+def _kofontfile():                              # 한글 설명용 폰트 (DejaVu 는 한글 못 그림)
+    cands = ['/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf',
+             '/usr/share/fonts/truetype/nanum/NanumGothic.ttf',
+             '/usr/share/fonts/truetype/nanum/NanumBarunGothicBold.ttf']
+    for c in cands:
+        if os.path.exists(c):
+            return c
+    try:                                        # 없으면 Colab 에 설치 시도
+        import subprocess
+        subprocess.run(['apt-get', 'install', '-y', '-q', 'fonts-nanum'],
+                       check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+    for c in cands:
+        if os.path.exists(c):
+            return c
+    return None
+
+_KF = _kofontfile()
+print('한글폰트:', _KF or '없음 → 설명은 영어로 대체')
+
+def font_ko(sz):
+    return ImageFont.truetype(_KF, sz) if _KF else None
+
 def labpath(p):
     return f'{SYN}/labels/' + os.path.splitext(os.path.basename(p))[0] + '.txt'
 
@@ -95,6 +119,13 @@ print('샘플:', os.path.basename(SAMPLE), f'(flame area {flame_area(SAMPLE):.3f
 rgb0 = cv2.cvtColor(cv2.imread(SAMPLE), cv2.COLOR_BGR2RGB)
 h0, w0 = rgb0.shape[:2]; th = round(TILE * h0 / w0)
 F, Fs = font(40), font(24)                         # 라벨 크게 (가독성)
+KD = font_ko(26)                                    # 한글 설명 폰트(없으면 None → 영어 설명)
+DESC = {'gaussian': '알갱이 노이즈', 'jpeg': '압축 손상', 'motion_blur': '흔들림',
+        'defocus': '초점 흐림', 'low_light': '어두워짐', 'contrast': '대비 저하',
+        'steam': '흰 수증기', 'grayscale': '흑백화', 'random_erasing': '무작위 가림'}
+DESC_EN = {'gaussian': 'sensor grain', 'jpeg': 'compression', 'motion_blur': 'camera shake',
+           'defocus': 'out of focus', 'low_light': 'darkening', 'contrast': 'low contrast',
+           'steam': 'white haze', 'grayscale': 'desaturate', 'random_erasing': 'occlusion'}
 
 cols, rows = len(SEVS), len(NL.ALL9)
 W = PAD_L + cols * TILE
@@ -111,11 +142,15 @@ for c, s in enumerate(SEVS):                       # 강도 헤더 (가로·세�
 
 for r, nm in enumerate(NL.ALL9):
     fn = NL.NOISE[nm]; y = HDR + r * (th + 4)
-    if nm in NL.HELDOUT:                            # 이름 + [held-out] 두 줄, 세로 가운데
-        d.text((14, y + th // 2 - vcenter(nm, F) - 6), nm, fill=(0, 0, 0), font=F)
-        d.text((14, y + th // 2 + 8), '[held-out]', fill=(180, 60, 0), font=Fs)
-    else:
-        d.text((14, y + th // 2 - vcenter(nm, F) // 2), nm, fill=(0, 0, 0), font=F)
+    # 좌측 라벨: 이름(코드명) + 간단 설명 + (held-out 표시), 세로 가운데 정렬
+    lines = [(nm, F, (0, 0, 0)),
+             (DESC[nm] if KD else DESC_EN[nm], KD or Fs, (95, 95, 95))]
+    if nm in NL.HELDOUT:
+        lines.append(('[held-out]', Fs, (180, 60, 0)))
+    adv = [vcenter(t, f) + 16 for (t, f, _) in lines]
+    yy = y + (th - (sum(adv) - 16)) // 2
+    for (t, f, col), a in zip(lines, adv):
+        d.text((14, yy), t, fill=col, font=f); yy += a
     rng = np.random.RandomState(SEED); tiles = {}
     for s in range(6):                             # 0..5 순서대로 rng 소비(재현성)
         out = fn(rgb0, s, rng)

@@ -43,7 +43,7 @@
 
 ![노이즈 9종 × 강도 예시](docs/img/noise_grid.jpg)
 
-*합성 화재 이미지 한 장에 노이즈 9종을 강도 0·2·4·5로 적용한 예시. 아래 3종(steam·grayscale·random_erasing)은 modelB 학습에서 뺀(held-out) 일반화 시험용.*
+*가로축 **severity = 노이즈 강도**(0 = 원본, 5 = 최대). 합성 화재 이미지 한 장에 노이즈 9종을 강도 0·2·4·5로 적용한 예시. 아래 3종(steam·grayscale·random_erasing)은 modelB 학습에서 뺀(held-out) 일반화 시험용.*
 
 > **Level 2 (아키텍처 감도)**: 위 5·5.6·6·6b·7을 YOLO8s로 한 바퀴 → 동일 프로토콜을 YOLO11s로 미러링(각 15회) → 결론이 아키텍처에 견고한지 CI로 교차검증. (LONO는 결과 보고 조건부.)
 
