@@ -23,8 +23,8 @@ OUT  = f'{FIRE}/noise_examples'
 SEVS = [0, 2, 4, 5]           # 보여줄 강도 (clean · 약 · 강 · 최대)
 SEED = 777
 TILE = 300
-PAD_L = 210
-HDR = 34
+PAD_L = 300                    # 좌측 노이즈 이름 칸 (큰 글씨 수용)
+HDR = 52                       # 위 강도 헤더 높이
 
 drive.mount('/content/drive')
 os.makedirs(OUT, exist_ok=True)
@@ -75,21 +75,25 @@ print('샘플:', os.path.basename(SAMPLE), f'(flame area {flame_area(SAMPLE):.3f
 
 rgb0 = cv2.cvtColor(cv2.imread(SAMPLE), cv2.COLOR_BGR2RGB)
 h0, w0 = rgb0.shape[:2]; th = round(TILE * h0 / w0)
-F, Fs = font(18), font(13)
+F, Fs = font(30), font(19)                         # 라벨 크게 (가독성)
 
 cols, rows = len(SEVS), len(NL.ALL9)
 W = PAD_L + cols * TILE
 H = HDR + rows * (th + 4)
 canvas = Image.new('RGB', (W, H), (245, 245, 245)); d = ImageDraw.Draw(canvas)
 
-for c, s in enumerate(SEVS):                       # 강도 헤더
-    d.text((PAD_L + c * TILE + TILE // 2 - 26, 8), f'severity {s}', fill=(0, 0, 0), font=F)
+for c, s in enumerate(SEVS):                       # 강도 헤더 (가운데 정렬)
+    txt = f'severity {s}'
+    tx = PAD_L + c * TILE + TILE // 2 - d.textlength(txt, font=F) / 2
+    d.text((tx, (HDR - 30) // 2), txt, fill=(0, 0, 0), font=F)
 
 for r, nm in enumerate(NL.ALL9):
     fn = NL.NOISE[nm]; y = HDR + r * (th + 4)
-    d.text((8, y + th // 2 - 16), nm, fill=(0, 0, 0), font=F)
     if nm in NL.HELDOUT:
-        d.text((8, y + th // 2 + 4), '[held-out]', fill=(180, 60, 0), font=Fs)
+        d.text((12, y + th // 2 - 32), nm, fill=(0, 0, 0), font=F)
+        d.text((12, y + th // 2 + 8), '[held-out]', fill=(180, 60, 0), font=Fs)
+    else:
+        d.text((12, y + th // 2 - 16), nm, fill=(0, 0, 0), font=F)
     rng = np.random.RandomState(SEED); tiles = {}
     for s in range(6):                             # 0..5 순서대로 rng 소비(재현성)
         out = fn(rgb0, s, rng)
