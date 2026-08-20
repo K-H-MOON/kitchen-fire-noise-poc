@@ -31,17 +31,38 @@
 | 3b. 불꽃 풀 배정 | `scripts/assign_flame_split.py` → `flame_split.json` | ✅ |
 | 3c. 불꽃 매트 추출 | `scripts/colab_extract_flames.py` | ✅ (konro 오염 제외) |
 | 4. 불꽃 합성 + 자동 박스 | `scripts/colab_synth.py` | ✅ (2,278/294/309) |
-| 5. 학습 (YOLO) | `scripts/colab_train.py` · `colab_phaseB_train.py` | ▶ v8 진행 중 |
-| 5.6 불꽃 제거 검증 — 불꽃을 지우면 검출도 사라지나 (배경이 아닌 **불 자체**를 보는지·핵심) | `scripts/colab_ablation.py` | ◐ 깨끗한 데이터로 재검증 대기 |
-| 6. 노이즈 저하 곡선 (Phase A) | `scripts/colab_noise_curve.py` | ◐ 미리보기 완료(재확인 대상) |
-| 6b. 노이즈 증강 극복 (Phase B) | `scripts/colab_phaseB_train.py` · `colab_phaseB_eval.py` | ▶ 진행 중 |
-| 7. 실제 화재 검증 — 합성이 실전 불에 전이되나 (정직성) | `scripts/colab_realfire_test.py` | ◐ 준비완료·학습 후 실행 |
+| 5. 학습 (YOLO) | `scripts/colab_train.py` · `colab_phaseB_train.py` | ✅ 30회(v8·v11 ×3config×5seed) |
+| 5.6 불꽃 제거 검증 — 불꽃을 지우면 검출도 사라지나 (배경이 아닌 **불 자체**를 보는지·핵심) | `scripts/colab_ablation.py` | ✅ 통과(불꽃 0.81 ≫ 배경 0.005) |
+| 6. 노이즈 저하 곡선 (Phase A) | `scripts/colab_noise_curve.py` | ✅ (6b eval 에 통합) |
+| 6b. 노이즈 증강 극복 (Phase B) | `scripts/colab_phaseB_train.py` · `colab_phaseB_eval.py` | ✅ eval 완료 |
+| 7. 실제 화재 검증 — 합성이 실전 불에 전이되나 (정직성) | `scripts/colab_realfire_test.py` | ✅ 0.31(하한·전이 약함) |
 
 > **노이즈 9종** (`noise_lib.py`, 강도 0→5): 화질계 6 — gaussian(가우시안)·jpeg(압축)·motion_blur(모션블러)·defocus(초점흐림)·low_light(저조도)·contrast(대비); 그 외 3 — steam(수증기)·grayscale(흑백)·random_erasing(무작위 가림). **6번**은 9종 전부에 저하 곡선을 그리고, **6b**는 modelA(9종 전부 증강)·modelB(화질 6종만 증강 + steam·grayscale·random_erasing을 held-out으로 일반화 검증)로 나눔.
 
 > **Level 2 (아키텍처 감도)**: 위 5·5.6·6·6b·7을 YOLO8s로 한 바퀴 → 동일 프로토콜을 YOLO11s로 미러링(각 15회) → 결론이 아키텍처에 견고한지 CI로 교차검증. (LONO는 결과 보고 조건부.)
 
 확정한 설계·근거는 **[docs/PREREGISTER.md](docs/PREREGISTER.md)** 에 있음.
+
+## 결과 요약 (2026-08-20)
+
+30회 학습(v8·v11 × baseline/modelA/modelB × 5 seed) + eval + 실제화재 + ablation 완료.
+상세 수치·CI·시트 관찰은 **[docs/TIMELINE.md](docs/TIMELINE.md)** 의 `결과`·`최종 결론`.
+
+> 용어: *지름길*=불꽃을 안 보고 배경 같은 엉뚱한 단서로 맞히기 · *강건성*=노이즈가 껴도 검출 유지 ·
+> *전이*=합성으로 배운 게 실제에도 통함 · *헛불(오탐)*=불이 없는데 불이라고 함 · *OOD*=학습에서 안 본 장면.
+
+- **배경 지름길 아님(ablation)**: 불꽃을 지우면 검출이 0.808→**0.005**로 사라지고 음성 오탐 0/116.
+  배경이 아니라 불꽃 자체를 봄 — 앞 저장소 유니폼 지름길 실패(49.7%)를 넘어섬.
+- **노이즈 강건성(합성)**: 노이즈가 검출을 무너뜨리고(gaussian 0.77→0.00 등), 그 노이즈를 학습하면
+  회복(modelA low_light 0.31→0.79). **v8·v11 두 아키텍처에서 똑같이** 나옴. 안 배운(held-out) 노이즈로의
+  일반화는 같은 종류엔 부분적, **구조적 가림엔 안 됨**.
+- **실제 전이는 약함(정직한 한계)**: 실제 유류화재 5개에서 실제 불 검출률 **0.31**(하한 — 연기
+  가림·경계 슬롭 포함). 성능을 붙잡는 핵심은 배경이 아니라 **학습한 불꽃 종류가 적고 실제와 덜 닮은 것**.
+  노이즈 증강(modelA)은 전이를 못 돕고 헛불만 늘림(0.09→0.16). 실제 OOD 장면의 **사람을 불꽃으로 오인**하는 새 오류도.
+
+**한 줄(쉬운 말로)**: 합성 화재 데이터에서는 노이즈를 씌워도 불을 잡고(강건성), 배경이 아니라 불
+자체를 보고 판단(지름길 아님)하는 검출기를 만들 수 있었다. 그러나 학습에 쓴 불꽃 종류가 너무 적어
+**실제 화재 영상에는 약하게만 통했고**, 노이즈 학습을 더해도 그 격차는 좁혀지지 않았다.
 
 ## 분할 (사이트 단위)
 
