@@ -80,7 +80,13 @@ print('실제 화재 검증 (합성 아님 · 소재 미사용 영상)')
 print('=' * 66)
 
 fire_det = fire_tot = nof_det = nof_tot = 0
-sheets = []
+KEEP = '/content/_rf_keep'                        # 시트용 프레임 영속 보관 (frames_of 의 tmp 는 매 shot 삭제됨)
+shutil.rmtree(KEEP, ignore_errors=True); os.makedirs(KEEP)
+sheets = []                                       # (kept_path, conf, kind, key) — kind: miss(놓친 불꽃)·fp(헛불)·hit(검출)
+def keep(p):
+    kp = f'{KEEP}/{len(sheets):02d}.jpg'; shutil.copy(p, kp); return kp
+def n_kind(k):
+    return len([x for x in sheets if x[2] == k])
 for s in ready:
     hit = [p for p in allf if norm(s['file']) in norm(os.path.basename(p))]
     if len(hit) != 1:
@@ -90,13 +96,15 @@ for s in ready:
     for a, b in s['fire_shots']:
         for p in frames_of(src, a, b, s.get('crop')):
             ok, cf = detected(p); fd += ok; ft += 1
-            if len(sheets) < 12 and ok:
-                sheets.append((p, cf, True))
+            if not ok and n_kind('miss') < 9:          # 놓친 불꽃 우선 — 형태 간극 진단
+                sheets.append((keep(p), cf, 'miss', s['key']))
+            elif ok and n_kind('hit') < 3:             # 검출 성공 몇 장 (대조용)
+                sheets.append((keep(p), cf, 'hit', s['key']))
     for a, b in s.get('nofire_shots', []):
         for p in frames_of(src, a, b, s.get('crop')):
             ok, cf = detected(p); nd += ok; nt += 1
-            if len([x for x in sheets if not x[2]]) < 4:
-                sheets.append((p, cf, False))
+            if ok and n_kind('fp') < 6:                # 실제 헛불(발화전 오탐)만
+                sheets.append((keep(p), cf, 'fp', s['key']))
     fire_det += fd; fire_tot += ft; nof_det += nd; nof_tot += nt
     fr = fd / ft if ft else 0
     print(f'  {s["key"]:<14} 불꽃 {fd}/{ft} ({fr:.2f})' +
@@ -123,14 +131,15 @@ json.dump({'conf': CONF, 'fps': FPS, 'real_flame_rate': real_flame_rate,
            'real_fp_rate': real_fp_rate, 'fire_tot': fire_tot, 'nofire_tot': nof_tot},
           open(f'{OUT}/realfire.json', 'w'), ensure_ascii=False, indent=1)
 
-# 시트 — 검출 박스 그려서
+# 시트 — 놓친 불꽃(miss)·헛불(fp)·검출(hit) 을 박스 그려서. miss 는 박스 없음(놓쳤으므로).
+LAB = {'miss': '놓침', 'fp': '헛불', 'hit': '검출'}
 if sheets:
     CW = 380; rows = (len(sheets) + 2) // 3
     tiles = []
-    for p, cf, isfire in sheets:
+    for p, cf, kind, key in sheets:
         r = model.predict(p, conf=CONF, verbose=False)[0]
         im = Image.fromarray(r.plot()[..., ::-1]); d = ImageDraw.Draw(im)
-        d.text((6, 6), ('불꽃' if isfire else '발화전') + f' conf={cf:.2f}',
+        d.text((6, 6), f'{key} · {LAB[kind]} conf={cf:.2f}',
                fill=(0, 255, 0), font=F)
         tiles.append(im)
     h0, w0 = np.asarray(tiles[0]).shape[:2]; ch = round(CW * h0 / w0)
