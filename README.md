@@ -37,7 +37,9 @@
 | 6b. 노이즈 증강 극복 (Phase B) | `scripts/colab_phaseB_train.py` · `colab_phaseB_eval.py` | ✅ eval 완료 |
 | 7. 실제 화재 검증 — 합성이 실전 불에 전이되나 (정직성) | `scripts/colab_realfire_test.py` | ✅ 0.31(하한·전이 약함) |
 
-> **노이즈 9종** (`noise_lib.py`, 강도 0→5): 화질계 6 — gaussian(가우시안)·jpeg(압축)·motion_blur(모션블러)·defocus(초점흐림)·low_light(저조도)·contrast(대비); 그 외 3 — steam(수증기)·grayscale(흑백)·random_erasing(무작위 가림). **6번**은 9종 전부에 저하 곡선을 그리고, **6b**는 modelA(9종 전부 증강)·modelB(화질 6종만 증강 + steam·grayscale·random_erasing을 held-out으로 일반화 검증)로 나눔.
+> **노이즈 9종** (`noise_lib.py`, 강도 0→5): 화질계 6 — gaussian(가우시안)·jpeg(압축)·motion_blur(모션블러)·defocus(초점흐림)·low_light(저조도)·contrast(대비); 그 외 3 — steam(수증기)·grayscale(흑백)·random_erasing(무작위 가림).
+>
+> **6번**은 9종 전부에 저하 곡선을 그리고, **6b**는 modelA(9종 전부 증강)·modelB(화질 6종만 증강 + steam·grayscale·random_erasing을 held-out으로 일반화 검증)로 나눔.
 
 ![노이즈 9종 × 강도 예시](docs/img/noise_grid.jpg)
 
