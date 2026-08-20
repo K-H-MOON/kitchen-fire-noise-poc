@@ -118,19 +118,35 @@ panels = [('합성 — 플랫 컷아웃', panelA, (185, 70, 0)),
 atlas = os.environ.get('FLAME_ATLAS')
 if atlas:
     try:
-        af = atlas if os.path.isfile(atlas) else sorted(
-            glob.glob(f'{atlas}/*.png') + glob.glob(f'{atlas}/*.jpg'))[0]
+        if os.path.isfile(atlas):
+            af = atlas
+        else:                                  # 폴더면 불꽃(warm) 큰 이미지 자동 선택
+            cand = sorted(glob.glob(f'{atlas}/**/*.png', recursive=True) +
+                          glob.glob(f'{atlas}/**/*.jpg', recursive=True))[:400]
+            af, bestw = cand[0], -1
+            for c in cand[::max(1, len(cand) // 24)]:      # 최대 ~24장만 샘플
+                im = cv2.imread(c)
+                if im is None:
+                    continue
+                a = int((warm(cv2.cvtColor(im, cv2.COLOR_BGR2RGB)) > 0).sum())
+                if a > bestw:
+                    bestw, af = a, c
         sp = Image.open(af)
-        if sp.mode == 'RGBA':
+        if sp.mode == 'RGBA':                  # 알파 스프라이트 → 회색 위 합성 + 알파 bbox
             bg = Image.new('RGBA', sp.size, (210, 210, 210, 255)); bg.alpha_composite(sp)
             arr = np.array(bg.convert('RGB'))
             al = np.array(sp.split()[-1]); ys, xs = np.where(al > 20)
             boxC = (xs.min(), ys.min(), xs.max(), ys.max()) if len(xs) else (0, 0, sp.width, sp.height)
-        else:
-            arr = np.array(sp.convert('RGB')); boxC = (0, 0, sp.width, sp.height)
-        panelC = square_crop(arr, boxC, pad=0.15)
-        panels.append(('실사 화염 아틀라스 — v2 후보', panelC, (0, 70, 150)))
-        print('C atlas:', os.path.basename(af))
+        else:                                  # 합성 이미지(RGB) → 불꽃 영역 자동 크롭
+            arr = np.array(sp.convert('RGB'))
+            cc, _ = cv2.findContours(warm(arr), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if cc:
+                x, y, ww, hh = cv2.boundingRect(max(cc, key=cv2.contourArea)); boxC = (x, y, x + ww, y + hh)
+            else:
+                boxC = (0, 0, sp.width, sp.height)
+        panelC = square_crop(arr, boxC, pad=0.3)
+        panels.append(('실사 아틀라스 합성 — v2 후보', panelC, (0, 70, 150)))
+        print('C atlas:', af)
     except Exception as e:
         print('C atlas 실패 → A·B 2단만:', e)
 else:
