@@ -122,7 +122,8 @@ if atlas:
             af = atlas
         else:                                  # 폴더면 불꽃(warm) 큰 이미지 자동 선택
             cand = sorted(glob.glob(f'{atlas}/**/*.png', recursive=True) +
-                          glob.glob(f'{atlas}/**/*.jpg', recursive=True))[:400]
+                          glob.glob(f'{atlas}/**/*.jpg', recursive=True) +
+                          glob.glob(f'{atlas}/**/*.webp', recursive=True))[:800]
             af, bestw = cand[0], -1
             for c in cand[::max(1, len(cand) // 24)]:      # 최대 ~24장만 샘플
                 im = cv2.imread(c)
