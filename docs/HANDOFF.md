@@ -20,7 +20,7 @@ v1 결론: 합성 파이프라인이 **지름길 아닌 진짜 불꽃 검출기*
 
 ## ★ 다음 세션 첫 작업 — v2 파이프라인 설계
 사용자가 "불꽃 다양성 + 합성 퀄리티를 올리면 파이프라인이 어떻게 되나"를 물음. 답해줄 v2 파이프라인:
-1. **S0 소재 확보**: 아틀라스는 **이미 확보** — kitchen-fire-poc repo `assets/flamelib`(680 WebP). Colab에서 `git clone` → `FLAME_ATLAS=/content/kitchen-fire-poc/assets/flamelib`. **분리 점검**: flamelib 원본 스톡화염 ↔ realfire 5영상 0 overlap 확인.
+1. **S0 소재 확보**: 아틀라스는 **이미 확보** — kitchen-fire-poc repo `assets/flamelib`(**390 WebP · 8소스 v01·02·03·05·06·07·09·10 · 전부 RGBA 실알파**). Colab에서 `git clone` → `FLAME_ATLAS=/content/kitchen-fire-poc/assets/flamelib`. **분리 점검**: flamelib 원본 스톡화염 ↔ realfire 5영상 0 overlap 확인.
 2. **S1 합성 개선**(핵심): `colab_synth.py`(v1 컴포지터)에 **가산/스크린 블렌딩 · 엣지 페더 · 색보정 · 코어 블룸 · 가짜 조명 스필**(배경 글로우) 추가. + 불꽃 외형 증강(색/밝기/스케일 지터).
 3. **S2 Phase 0**(값쌈, 재학습 없음): 몇 장 합성 → `colab_flame_compare.py`로 v1 컷아웃과 육안 비교. 별로면 S1로 되돌림.
 4. **S3 합성 데이터**: C0(=v1)·C3(=풀 v2) synth 생성. 배경·분할 고정.

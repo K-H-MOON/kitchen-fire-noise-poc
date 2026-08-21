@@ -1,31 +1,31 @@
-# ===== 4단계: 배경 위 불꽃 합성 + YOLO 자동 박스 (Colab) =====
+# ===== 4단계: 배경 위 불꽃 합성 + YOLO 자동 박스 (Colab) — v2 통합 =====
 #
-# bg 프레임(2단계) 위에 불꽃 스프라이트(3c단계)를 얹어 검출 학습용 데이터셋을 만든다.
-# 스프라이트는 이미 불꽃 bbox 로 잘려 있으므로 **얹은 사각형이 곧 정답 박스**다 —
-# 수작업 주석 0.
+# v1: 불꽃 스프라이트를 알파 오버로 얹어 검출 학습 데이터를 만듦(수작업 주석 0).
+#     결론 — 실제 불 전이 약함(realfire 0.31). 병목 = 합성 불꽃의 현실성·다양성
+#     (소재 4종 · 납작한 컷아웃).
 #
-# 이 스크립트가 지키는 설계(docs/PREREGISTER.md):
+# v2: **불 합성만 바꾸고 나머지(배경·분할·장수·seed·배치)는 전부 고정**하는 단일변수
+#     A/B. C0~C3 를 한 스크립트의 SYNTH_MODE 로 돌려 같은 하네스로 생성한다.
+#     상세·성공기준·해석트리 = docs/PREREGISTER_v2.md.
 #
-#  1) 풀 매칭 (누수 방지) — split 별로 쓸 불꽃 풀을 고정한다:
-#       train 합성 = train 배경 + train 불꽃
-#       val   합성 = val   배경 + train 불꽃   (test 불꽃은 절대 안 씀)
-#       test  합성 = test  배경 + test  불꽃
-#     test 는 배경(사이트)도 불꽃도 학습에서 한 번도 안 본 것 → 진짜 일반화를 잰다.
+#     | 모드 | 불꽃 소스        | 합성 방식                         | 직전 대비 |
+#     | C0   | v1 매트 4종      | 알파 오버                         | (기준선)  |
+#     | C1   | 아틀라스 390     | 알파 오버                         | 소스만    |
+#     | C2   | 아틀라스 390     | +스크린·엣지페더·색보정·코어블룸   | 합성 통합 |
+#     | C3   | 아틀라스 390     | +가짜 조명 스필                   | 조명 스필 |
 #
-#  2) 제약된 무작위 배치 (B) — 불꽃을 화면 하단~중앙 영역에만 무작위로 놓는다.
-#     '공중의 불' 은 피하되 조리면 ROI 지정(A)까지는 안 간다. 검출은 위치 불변이라
-#     이 정도로 충분하고, 오히려 위치 증강이 된다.
+# 확정한 두 세부 결정 (docs/PREREGISTER_v2.md §5.5):
+#   (가) 라벨 박스 = **알파 bbox 고정** — 블룸·스필이 배경을 밝혀도 박스는 안 넓힘.
+#        모든 모드 동일 → 단일변수 보존 · realfire 채점 기준(불꽃 자체)과 정합.
+#   (나) 블렌딩 = **스크린 + 코어 블룸** — 밝은 급식실 배경(~150+)에서 가산은 순백
+#        클리핑(흰 컷아웃). 스크린은 색·계조 살림. 코어 블룸으로 백열 코어만 보완.
 #
-#  3) glow 블렌딩 — 그냥 붙이면 경계선(seam)이 남아 모델이 '붙인 흔적'을 배운다
-#     (합성 아티팩트 지름길). 불꽃 둘레에 난색 광원 스필을 더해 경계를 녹인다.
+# 아틀라스(flamelib)는 RGBA WebP 390장(8소스). 알파가 실재 → 휘도키잉 불필요.
+# 선행 — kitchen-fire-poc 를 clone 해 ATLAS 경로가 존재해야 함(C1~C3).
+#        C0 는 v1 flame_matte(3c: colab_extract_flames.py) 가 있어야 함.
 #
-#  4) 하드네거티브 — 같은 방식으로 '회색으로 죽인 블롭'을 붙이되 정답은 비움.
-#     "붙인 것 ≠ 무조건 불" 을 학습시켜, 불꽃색·밝기로 판단하게 만든다.
-#
-# 나오는 것 — YOLO 데이터셋(images/labels) + data.yaml + manifest_synth.json + QC 시트.
-# **학습 전 QC 시트로 박스가 불꽃에 맞는지, 경계가 자연스러운지 반드시 확인.**
-#
-# 선행 — 3c(colab_extract_flames.py)로 flame_matte 가 만들어져 있어야 한다.
+# 나오는 것 — synth_<MODE>/ YOLO 데이터셋 + data.yaml + manifest_synth.json + QC 시트.
+# **학습 전 _check.jpg 로 박스·경계·발광이 자연스러운지 반드시 확인(Phase 0).**
 
 import os, glob, json, random, shutil
 import numpy as np, cv2
@@ -33,30 +33,56 @@ from PIL import Image, ImageDraw, ImageFont
 from google.colab import drive
 
 FIRE       = '/content/drive/MyDrive/fire_frames'
-BG_ROOT    = f'{FIRE}/bg'            # bg/<split>/<site>/*.jpg
-FLAME_ROOT = f'{FIRE}/flame_matte'   # <pool>/<key>/*.png (RGBA)
-OUT        = f'{FIRE}/synth'         # 결과 YOLO 데이터셋
+BG_ROOT    = f'{FIRE}/bg'                                   # bg/<split>/<site>/*.jpg
+FLAME_V1   = f'{FIRE}/flame_matte'                          # C0: <pool>/<key>/*.png (RGBA)
+ATLAS      = '/content/kitchen-fire-poc/assets/flamelib'    # C1~C3: vNN_###.webp (RGBA)
+
+MODE       = os.environ.get('SYNTH_MODE', 'C3').upper()     # C0 / C1 / C2 / C3
+OUT        = f'{FIRE}/synth_{MODE}'                         # 모드별 분리 저장
 
 SEED          = 1
-POS_FRAC      = 0.60      # 양성(불꽃 합성) 비율
-HARDNEG_FRAC  = 0.15      # 하드네거티브(회색 블롭) 비율 — 나머지(0.25)는 평범한 음성
-FLAME_H_RANGE = (0.15, 0.45)   # 불꽃 높이 = 배경 높이의 이 비율 (무작위)
-PLACE_CX      = (0.30, 0.70)   # 불꽃 중심 x 범위 (배경 폭 비율)
-PLACE_CY      = (0.45, 0.78)   # 불꽃 중심 y 범위 (하단~중앙)
-GLOW          = 0.5            # 난색 광원 스필 세기 (0=끔)
+POS_FRAC      = 0.60
+HARDNEG_FRAC  = 0.15
+FLAME_H_RANGE = (0.15, 0.45)
+PLACE_CX      = (0.30, 0.70)
+PLACE_CY      = (0.45, 0.78)
 JPG_Q         = 92
+ATHR          = 0.06          # 알파 문턱(박스·가시성)
 
 # split → 쓸 불꽃 풀. val 이 train 풀을 쓰는 것이 핵심 — test 풀은 test 에만.
 SPLIT_POOL = {'train': 'train', 'val': 'train', 'test': 'test'}
+
+# 아틀라스 소스(vNN) → train/test 풀 배정. **확정 2026-08-21 · 근거 pre-reg §5.6.**
+#   ① 비율 348/42(≈89/11)는 이미지 분할 2278/309 과 매칭 → 재사용 균형(~4× 양쪽).
+#   ② test 소스 불꽃은 학습에서 한 번도 안 쓰이는 held-out(합성 test 가드·텍스처 착시 차단).
+#   ③ realfire 와의 0-overlap 은 소스 풀이 원래 다름(스톡 화염 vs 유류화재)으로 충족,
+#      S0 에서 실제 확인.
+# 소스별 장수: v01 39·v02 4·v03 117·v05 19·v06 20·v07 136·v09 23·v10 32 (합 390).
+ATLAS_SPLIT = {'v01': 'train', 'v02': 'train', 'v03': 'train', 'v06': 'train',
+               'v07': 'train', 'v10': 'train',                       # 348장
+               'v05': 'test',  'v09': 'test'}                        #  42장 held-out
+
+CFG = {
+    'C0': dict(source='v1',    blend='alpha',  feather=False, colorcorr=False, bloom=False, spill=False),
+    'C1': dict(source='atlas', blend='alpha',  feather=False, colorcorr=False, bloom=False, spill=False),
+    'C2': dict(source='atlas', blend='screen', feather=True,  colorcorr=True,  bloom=True,  spill=False),
+    'C3': dict(source='atlas', blend='screen', feather=True,  colorcorr=True,  bloom=True,  spill=True),
+}[MODE]
 
 drive.mount('/content/drive')
 rng = random.Random(SEED)
 
 # ---------------------------------------------------------------------------
-# 스프라이트 적재 (풀별, 캐시)
+# 스프라이트 적재 (풀별) — C0 은 v1 매트, C1~C3 은 아틀라스. 둘 다 RGBA.
 # ---------------------------------------------------------------------------
 def load_pool(pool):
-    return sorted(glob.glob(f'{FLAME_ROOT}/{pool}/*/*.png'))
+    if CFG['source'] == 'v1':
+        return sorted(glob.glob(f'{FLAME_V1}/{pool}/*/*.png'))
+    out = []
+    for f in sorted(glob.glob(f'{ATLAS}/*.webp')):
+        if ATLAS_SPLIT.get(os.path.basename(f).split('_')[0]) == pool:
+            out.append(f)
+    return out
 
 _cache = {}
 def sprite(path):
@@ -70,26 +96,72 @@ def scale_h(spr, target_h):
     return cv2.resize(spr, (max(1, int(w * s)), max(1, int(h * s))),
                       interpolation=cv2.INTER_AREA)
 
-def paste(bg, spr, cx, cy, glow=GLOW):
-    """bg(RGB uint8) 위에 spr(RGBA) 를 (cx,cy) 중심으로 얹는다. 얹은 사각형을 반환."""
+# ---------------------------------------------------------------------------
+# 합성 연산자 (로컬 검증 완료 — scratchpad/demo_synth.py)
+# ---------------------------------------------------------------------------
+def _screen(bg, fg):
+    return 255.0 - (255.0 - bg) * (255.0 - fg) / 255.0
+
+def _luma(x):
+    return x[..., 0] * 0.299 + x[..., 1] * 0.587 + x[..., 2] * 0.114
+
+def _feather(a, sigma):
+    return cv2.GaussianBlur(a, (0, 0), sigmaX=max(sigma, 0.1))
+
+def _color_correct(fg, bg_mean, strength=0.15):
+    cast = bg_mean - bg_mean.mean()                 # 배경 색편향으로 살짝 당김
+    return np.clip(fg + cast[None, None, :] * strength, 0, 255)
+
+def _core_bloom(out, fg, a3, bloom=0.9, glow=0.35):
+    ci = np.clip((_luma(fg) / 255.0 - 0.6) / 0.4, 0, 1) * a3[..., 0]
+    out = out + ci[..., None] * (255.0 - out) * bloom          # headroom 비례 → 클리핑 없음
+    g = _feather(ci, sigma=max(fg.shape[:2]) * 0.05)
+    warm = np.array([255, 180, 90], np.float32)
+    return out + g[..., None] * warm[None, None, :] / 255.0 * glow * 60.0
+
+def _alpha_bbox(a):
+    ys, xs = np.where(a > ATHR)
+    if len(xs) == 0:
+        return None
+    return int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1
+
+def composite(bg, spr, cx, cy):
+    """bg(RGB uint8) 위에 spr(RGBA) 를 (cx,cy) 중심으로 CFG 방식대로 얹는다.
+       반환: (합성 uint8, 알파 bbox 박스). 박스는 스프라이트 원본 알파 기준(고정)."""
     H, W = bg.shape[:2]; h, w = spr.shape[:2]
     x0 = min(max(0, int(cx - w / 2)), max(0, W - w))
     y0 = min(max(0, int(cy - h / 2)), max(0, H - h))
     out = bg.astype(np.float32)
     rgb = spr[..., :3].astype(np.float32)
-    a = spr[..., 3].astype(np.float32) / 255.0
-    if glow > 0:
-        m = int(max(h, w) * 0.35)
-        gy0, gy1 = max(0, y0 - m), min(H, y0 + h + m)
-        gx0, gx1 = max(0, x0 - m), min(W, x0 + w + m)
-        pad = np.zeros((gy1 - gy0, gx1 - gx0), np.float32)
-        pad[y0 - gy0:y0 - gy0 + h, x0 - gx0:x0 - gx0 + w] = a
-        gb = cv2.GaussianBlur(pad, (0, 0), sigmaX=max(h, w) * 0.12)
-        warm = np.array([255, 150, 45], np.float32)          # RGB 난색
-        out[gy0:gy1, gx0:gx1] += gb[..., None] * warm * glow
+    a_orig = spr[..., 3].astype(np.float32) / 255.0            # 박스는 이 원본 알파로
+    a = a_orig
+    if CFG['feather']:
+        a = _feather(a_orig, sigma=max(h, w) * 0.02)
+    if CFG['colorcorr']:
+        rgb = _color_correct(rgb, out.reshape(-1, 3).mean(0))
+    a3 = a[..., None]
+
     reg = out[y0:y0 + h, x0:x0 + w]
-    out[y0:y0 + h, x0:x0 + w] = rgb * a[..., None] + reg * (1 - a[..., None])
-    return np.clip(out, 0, 255).astype(np.uint8), (x0, y0, x0 + w, y0 + h)
+    if CFG['blend'] == 'screen':
+        comp = reg * (1 - a3) + _screen(reg, rgb) * a3
+    else:                                                       # alpha over
+        comp = reg * (1 - a3) + rgb * a3
+    if CFG['bloom']:
+        comp = _core_bloom(comp, rgb, a3)
+    out[y0:y0 + h, x0:x0 + w] = comp
+
+    if CFG['spill']:                                           # 조명 스필(캔버스 전체·박스 밖)
+        af = np.zeros((H, W), np.float32)
+        af[y0:y0 + h, x0:x0 + w] = a
+        sp = _feather(af, sigma=max(H, W) * 0.04)
+        warm = np.array([255, 140, 45], np.float32)
+        out = out + sp[..., None] * warm[None, None, :] / 255.0 * 0.5 * 90.0
+
+    out = np.clip(out, 0, 255).astype(np.uint8)
+    bb = _alpha_bbox(a_orig)
+    if bb is None:
+        return out, (x0, y0, x0 + w, y0 + h)
+    return out, (x0 + bb[0], y0 + bb[1], x0 + bb[2], y0 + bb[3])
 
 def grayblob(spr):
     """불꽃 스프라이트를 회색·어둡게 죽여 '불 아닌 붙임' 으로. 모양만 남고 색·밝기는 뺌."""
@@ -98,11 +170,22 @@ def grayblob(spr):
     g[..., :3] = np.clip(lum * 0.55, 0, 255).astype(np.uint8)
     return g
 
+def paste_gray(bg, spr, cx, cy):
+    """하드네거티브 — 회색 블롭을 알파 오버(발광·스필 없음). 반환: 합성 uint8."""
+    H, W = bg.shape[:2]; h, w = spr.shape[:2]
+    x0 = min(max(0, int(cx - w / 2)), max(0, W - w))
+    y0 = min(max(0, int(cy - h / 2)), max(0, H - h))
+    out = bg.astype(np.float32)
+    rgb = spr[..., :3].astype(np.float32)
+    a3 = (spr[..., 3].astype(np.float32) / 255.0)[..., None]
+    out[y0:y0 + h, x0:x0 + w] = out[y0:y0 + h, x0:x0 + w] * (1 - a3) + rgb * a3
+    return np.clip(out, 0, 255).astype(np.uint8)
+
 def place_one(bg, base_spr):
     H, W = bg.shape[:2]
     th = int(H * rng.uniform(*FLAME_H_RANGE))
     spr = scale_h(base_spr, th)
-    if spr.shape[1] > 0.9 * W:                               # 너무 넓으면 줄임
+    if spr.shape[1] > 0.9 * W:                                 # 너무 넓으면 줄임
         spr = scale_h(spr, int(spr.shape[0] * 0.9 * W / spr.shape[1]))
     cx = rng.uniform(*PLACE_CX) * W
     cy = rng.uniform(*PLACE_CY) * H
@@ -111,8 +194,10 @@ def place_one(bg, base_spr):
 # ---------------------------------------------------------------------------
 # 합성
 # ---------------------------------------------------------------------------
-if not os.path.isdir(FLAME_ROOT):
-    raise SystemExit(f'{FLAME_ROOT} 가 없음 — 3c(colab_extract_flames.py)를 먼저 돌릴 것')
+if CFG['source'] == 'atlas' and not glob.glob(f'{ATLAS}/*.webp'):
+    raise SystemExit(f'{ATLAS} 가 비었음 — kitchen-fire-poc 를 clone 할 것(HANDOFF)')
+if CFG['source'] == 'v1' and not os.path.isdir(FLAME_V1):
+    raise SystemExit(f'{FLAME_V1} 가 없음 — 3c(colab_extract_flames.py)를 먼저 돌릴 것')
 
 shutil.rmtree(OUT, ignore_errors=True)
 try:
@@ -120,12 +205,13 @@ try:
 except Exception:
     F = ImageFont.load_default()
 
-manifest = {'seed': SEED, 'pos_frac': POS_FRAC, 'hardneg_frac': HARDNEG_FRAC,
-            'glow': GLOW, 'split_pool': SPLIT_POOL, 'splits': {}}
+manifest = {'mode': MODE, 'cfg': CFG, 'seed': SEED, 'pos_frac': POS_FRAC,
+            'hardneg_frac': HARDNEG_FRAC, 'split_pool': SPLIT_POOL,
+            'atlas_split': ATLAS_SPLIT if CFG['source'] == 'atlas' else None, 'splits': {}}
 qc = []
 
 print('=' * 70)
-print('합성 — 배경 위 불꽃 + 자동 박스')
+print(f'합성 v2 — MODE {MODE}  {CFG}')
 print('=' * 70)
 
 for split in ('train', 'val', 'test'):
@@ -138,7 +224,7 @@ for split in ('train', 'val', 'test'):
     print(f'\n[{split}] 배경 {len(bgs)}장 · 불꽃 풀 "{pool}" {len(sprites)}개')
     if not sprites:
         print(f'  **불꽃 풀이 빔 — 이 split 은 전부 음성으로 만든다** '
-              f'(flame_split.json 배정을 확인할 것)')
+              f'(ATLAS_SPLIT / flame_matte 배정 확인)')
 
     n_pos = n_hn = n_neg = 0
     for i, bp in enumerate(bgs):
@@ -151,7 +237,7 @@ for split in ('train', 'val', 'test'):
         label = ''
         if role == 'pos':
             spr, cx, cy = place_one(bg, sprite(rng.choice(sprites)))
-            bg, (x0, y0, x1, y1) = paste(bg, spr, cx, cy, glow=GLOW)
+            bg, (x0, y0, x1, y1) = composite(bg, spr, cx, cy)
             cxn, cyn = (x0 + x1) / 2 / W, (y0 + y1) / 2 / H
             bw, bh = (x1 - x0) / W, (y1 - y0) / H
             label = f'0 {cxn:.6f} {cyn:.6f} {bw:.6f} {bh:.6f}\n'
@@ -160,7 +246,7 @@ for split in ('train', 'val', 'test'):
                 qc.append((split, bg.copy(), (x0, y0, x1, y1)))
         elif role == 'hardneg' and sprites:
             spr, cx, cy = place_one(bg, grayblob(sprite(rng.choice(sprites))))
-            bg, _ = paste(bg, spr, cx, cy, glow=0)           # 광원 없이 — 불 아님
+            bg = paste_gray(bg, spr, cx, cy)
             n_hn += 1
         else:
             n_neg += 1
@@ -168,9 +254,8 @@ for split in ('train', 'val', 'test'):
         stem = os.path.splitext(os.path.basename(bp))[0]
         name = f'{i:05d}_{stem}'
         Image.fromarray(bg).save(f'{img_dir}/{name}.jpg', quality=JPG_Q)
-        open(f'{lab_dir}/{name}.txt', 'w').write(label)      # 음성은 빈 파일
+        open(f'{lab_dir}/{name}.txt', 'w').write(label)        # 음성은 빈 파일
 
-    # 검산 — 이미지 수 == 라벨 수
     ni = len(glob.glob(f'{img_dir}/*.jpg')); nl = len(glob.glob(f'{lab_dir}/*.txt'))
     ok = ni == nl == len(bgs)
     print(f'  양성 {n_pos} · 하드네거 {n_hn} · 음성 {n_neg}  '
@@ -186,20 +271,18 @@ for split in ('train', 'val', 'test'):
 open(f'{OUT}/data.yaml', 'w').write(
     f'path: {OUT}\ntrain: train/images\nval: val/images\ntest: test/images\n'
     f'nc: 1\nnames: [\'fire\']\n')
-json.dump(manifest, open(f'{OUT}/manifest_synth.json', 'w'),
-          ensure_ascii=False, indent=1)
+json.dump(manifest, open(f'{OUT}/manifest_synth.json', 'w'), ensure_ascii=False, indent=1)
 
 print('\n' + '=' * 70)
-print('요약')
+print(f'요약 — MODE {MODE}')
 print('=' * 70)
 for s, d in manifest['splits'].items():
     print(f'  {s:<6} 양성 {d["pos"]:>5} · 하드네거 {d["hardneg"]:>4} · 음성 {d["neg"]:>5} '
           f'· 합 {d["total"]:>5}  (불꽃풀 {d["pool"]} {d["n_sprites"]}개)')
-print(f'\n-> 데이터셋: {OUT}/<split>/images · labels')
-print(f'-> {OUT}/data.yaml · manifest_synth.json')
+print(f'\n-> {OUT}/<split>/images · labels · data.yaml · manifest_synth.json')
 
 # ---------------------------------------------------------------------------
-# QC 시트 — 박스가 불꽃에 맞는지, 경계가 자연스러운지
+# QC 시트 — 박스가 불꽃에 맞는지, 발광·경계가 자연스러운지 (Phase 0 육안)
 # ---------------------------------------------------------------------------
 if qc:
     CW = 360; cols = 3; rows = (len(qc) + cols - 1) // cols
@@ -208,13 +291,13 @@ if qc:
     dr = ImageDraw.Draw(sheet)
     for j, (split, img, box) in enumerate(qc):
         im = Image.fromarray(img); d = ImageDraw.Draw(im)
-        d.rectangle(box, outline=(0, 255, 0), width=3)       # 자동 박스
+        d.rectangle(box, outline=(0, 255, 0), width=3)
         r, c = divmod(j, cols); y = r * (ch + 26)
-        dr.text((c * CW + 6, y + 3), f'{split} 양성+박스', fill=(0, 255, 0), font=F)
+        dr.text((c * CW + 6, y + 3), f'{MODE} {split} 양성+박스', fill=(0, 255, 0), font=F)
         sheet.paste(im.resize((CW, ch)), (c * CW, y + 26))
     sheet.save(f'{OUT}/_check.jpg', quality=88)
     print(f'\n확인용 시트 -> {OUT}/_check.jpg')
-    print('  녹색 박스가 불꽃에 딱 맞는지, 경계가 티 나게 붙었는지(seam) 확인.')
-    print('  경계가 심하면 GLOW 를 올리고, 불꽃이 어색하게 크면 FLAME_H_RANGE 를 줄인다.')
+    print('  녹색 박스가 불꽃에 맞는지(스필·블룸은 박스 밖), 발광이 자연스러운지 확인.')
+    print('  C0 와 C3 시트를 나란히 비교 — 컷아웃 vs 발광(Phase 0 게이트).')
 
-print('\n다음 — 학습(YOLO) 전에 Grad-CAM 으로 모델이 불꽃을 보는지 검증(사전 등록).')
+print('\n다음 — C0 와 C3 를 각각 생성(SYNTH_MODE 로 재실행) 후 Phase 0 육안 비교.')
