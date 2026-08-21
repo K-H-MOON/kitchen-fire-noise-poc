@@ -18,6 +18,7 @@ try:
 except ImportError:
     subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'ultralytics'], check=True)
     from ultralytics import YOLO
+import torch
 
 REPO = '/content/kitchen-fire-noise-poc/scripts'
 FIRE = '/content/drive/MyDrive/fire_frames'
@@ -95,6 +96,9 @@ for cond in CONDS:
             res[cond][seed][v] = {'flame': rate(m, FR[v]['fire']),
                                   'fp': rate(m, FR[v]['nofire'])}
         print(f'  {name} 예측 완료')
+        del m                                        # GPU 메모리 해제 (10모델 순차)
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
 # ---------------------------------------------------------------------------
 # 3) 집계 — 영상단위 평균 ± 군집 CI (영상별 seed평균 → 영상들 사이)
@@ -151,10 +155,12 @@ if summary['C0']['flame'] and summary['C3']['flame']:
     print(f'C3 - C0 = {delta:+.3f}  (영상단위 real_flame_rate)')
     if delta > 0 and not overlap:
         print('판정: C3 ≫ C0 (CI 비겹침) — 현실성 개선이 전이를 올림(가설 확인 → Phase 2).')
+    elif delta < 0 and not overlap:
+        print('판정: C3 ≪ C0 (CI 비겹침) — 현실성이 전이를 오히려 낮춤(예상 밖 · 원인 재점검).')
     elif abs(delta) <= max(c0ci, c3ci):
         print('판정: C3 ≈ C0 — 병목은 불꽃이 아니었음(값진 음성 → 방향 전환).')
     else:
-        print('판정: C3 > C0 이나 CI 겹침 — 개선 시사·유의성 약함(realfire·seed 확대 검토).')
+        print('판정: 델타는 있으나 CI 겹침 — 유의성 약함(realfire·seed 확대 검토).')
     if summary['C0']['fp'] and summary['C3']['fp']:
         if summary['C3']['fp'][0] > summary['C0']['fp'][0] + max(summary['C0']['fp'][1], summary['C3']['fp'][1]):
             print('  ⚠ real_fp 악화 — 검출↑라도 헛불이 늘었는지 함께 볼 것(§6).')
