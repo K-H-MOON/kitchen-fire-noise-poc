@@ -48,6 +48,8 @@ PLACE_CX      = (0.30, 0.70)
 PLACE_CY      = (0.45, 0.78)
 JPG_Q         = 92
 ATHR          = 0.06          # 알파 문턱(박스·가시성)
+VIS_FLOOR     = 10.0          # 박스 영역 평균 |Δ| 바닥 — 미만이면 '무신호'로 보고 재배치
+RETRY         = 8             # 가시성 재시도 횟수(스케일·위치·소재 바꿈). 형제 smoke repo 교훈
 
 # split → 쓸 불꽃 풀. val 이 train 풀을 쓰는 것이 핵심 — test 풀은 test 에만.
 SPLIT_POOL = {'train': 'train', 'val': 'train', 'test': 'test'}
@@ -70,7 +72,8 @@ CFG = {
 }[MODE]
 
 drive.mount('/content/drive')
-rng = random.Random(SEED)
+rng = random.Random(SEED)          # 배치(스케일·위치·소재)
+rng_role = random.Random(SEED)     # 역할(양성/음성) — 별도 스트림이라 재시도와 무관, 전 모드 동일 배정
 
 # ---------------------------------------------------------------------------
 # 스프라이트 적재 (풀별) — C0 은 v1 매트, C1~C3 은 아틀라스. 둘 다 RGBA.
@@ -192,6 +195,50 @@ def place_one(bg, base_spr):
     return spr, cx, cy
 
 # ---------------------------------------------------------------------------
+# 가시성 게이트 — 무신호 라벨 차단 (형제 smoke repo 교훈). 전 모드 공통 → 단일변수 유지.
+#   스크린은 밝은 배경에서 씻겨 불꽃이 안 보이는 배치가 생김 → 박스에 신호 없는 라벨.
+#   그런 배치를 버리고 스케일·위치·소재를 바꿔 재시도(장수 유지). C0(불투명)은 거의 안 걸림.
+# ---------------------------------------------------------------------------
+def _place_geom(bg, spr, cx, cy):
+    H, W = bg.shape[:2]; h, w = spr.shape[:2]
+    x0 = min(max(0, int(cx - w / 2)), max(0, W - w))
+    y0 = min(max(0, int(cy - h / 2)), max(0, H - h))
+    a_orig = spr[..., 3].astype(np.float32) / 255.0
+    return x0, y0, a_orig, _alpha_bbox(a_orig)
+
+def visibility(bg, spr, x0, y0, a_orig, bb):
+    """박스(tight) 영역에서 블렌딩이 만드는 평균 |Δ|. feather/bloom/spill 전이라 저렴.
+       Δ = (블렌드 - 배경)·알파. 스크린이 밝은 배경에서 무신호가 된 배치를 걸러내는 값."""
+    rgb = spr[..., :3].astype(np.float32)
+    if CFG['colorcorr']:
+        rgb = _color_correct(rgb, bg.reshape(-1, 3).mean(0))
+    bx0, by0, bx1, by1 = bb
+    bgbox = bg[y0 + by0:y0 + by1, x0 + bx0:x0 + bx1].astype(np.float32)
+    fgbox = rgb[by0:by1, bx0:bx1]
+    abox = a_orig[by0:by1, bx0:bx1][..., None]
+    blended = _screen(bgbox, fgbox) if CFG['blend'] == 'screen' else fgbox
+    return float((np.abs(blended - bgbox) * abox).mean())
+
+def place_gated(bg, sprites):
+    """RETRY 안에 바닥(VIS_FLOOR)을 넘으면 그 배치를, 못 넘으면 그중 가장 잘 보이는 것(최선)을
+       쓴다. 반환: (spr, cx, cy, 가시성, 바닥미달여부)."""
+    best = None
+    for _ in range(RETRY):
+        spr, cx, cy = place_one(bg, sprite(rng.choice(sprites)))
+        x0, y0, a_orig, bb = _place_geom(bg, spr, cx, cy)
+        if bb is None:
+            continue
+        vis = visibility(bg, spr, x0, y0, a_orig, bb)
+        if best is None or vis > best[3]:
+            best = (spr, cx, cy, vis)
+        if vis >= VIS_FLOOR:
+            return spr, cx, cy, vis, False
+    if best is None:
+        spr, cx, cy = place_one(bg, sprite(rng.choice(sprites)))
+        return spr, cx, cy, 0.0, True
+    return best[0], best[1], best[2], best[3], True
+
+# ---------------------------------------------------------------------------
 # 합성
 # ---------------------------------------------------------------------------
 if CFG['source'] == 'atlas' and not glob.glob(f'{ATLAS}/*.webp'):
@@ -227,21 +274,22 @@ for split in ('train', 'val', 'test'):
               f'(ATLAS_SPLIT / flame_matte 배정 확인)')
 
     n_pos = n_hn = n_neg = 0
+    vis_list = []; n_fallback = 0
     for i, bp in enumerate(bgs):
         bg = np.asarray(Image.open(bp).convert('RGB'))
         H, W = bg.shape[:2]
-        r = rng.random()
+        r = rng_role.random()
         role = ('pos' if (r < POS_FRAC and sprites) else
                 'hardneg' if r < POS_FRAC + HARDNEG_FRAC else 'neg')
 
         label = ''
         if role == 'pos':
-            spr, cx, cy = place_one(bg, sprite(rng.choice(sprites)))
+            spr, cx, cy, vis, fb = place_gated(bg, sprites)
             bg, (x0, y0, x1, y1) = composite(bg, spr, cx, cy)
             cxn, cyn = (x0 + x1) / 2 / W, (y0 + y1) / 2 / H
             bw, bh = (x1 - x0) / W, (y1 - y0) / H
             label = f'0 {cxn:.6f} {cyn:.6f} {bw:.6f} {bh:.6f}\n'
-            n_pos += 1
+            n_pos += 1; vis_list.append(vis); n_fallback += int(fb)
             if len(qc) < 12 and split != 'val':
                 qc.append((split, bg.copy(), (x0, y0, x1, y1)))
         elif role == 'hardneg' and sprites:
@@ -260,10 +308,15 @@ for split in ('train', 'val', 'test'):
     ok = ni == nl == len(bgs)
     print(f'  양성 {n_pos} · 하드네거 {n_hn} · 음성 {n_neg}  '
           f'(이미지 {ni} · 라벨 {nl})  [검산 {"통과" if ok else "**실패**"}]')
+    if n_pos:
+        print(f'  가시성 중앙 {np.median(vis_list):.1f} · 바닥({VIS_FLOOR:.0f}) 미달로 최선 사용 '
+              f'{n_fallback}장 ({n_fallback / n_pos:.0%})')
     assert ok, '이미지/라벨 수 불일치'
     manifest['splits'][split] = {'pool': pool, 'n_sprites': len(sprites),
                                  'pos': n_pos, 'hardneg': n_hn, 'neg': n_neg,
-                                 'total': len(bgs)}
+                                 'total': len(bgs),
+                                 'vis_median': float(np.median(vis_list)) if n_pos else None,
+                                 'fallback': n_fallback}
 
 # ---------------------------------------------------------------------------
 # data.yaml + manifest
