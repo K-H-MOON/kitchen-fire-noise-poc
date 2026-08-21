@@ -14,7 +14,7 @@
 
 | # | 단계 | 하는 일 | 스크립트 | 산출 |
 |---|---|---|---|---|
-| 1 | 프로브 | 한 모델로 수렴 epoch 측정 → EPOCHS 확정 | `colab_v2_probe.py` | best·수렴점 (측정용, 버림) |
+| 1 | 프로브 | 한 모델로 수렴 epoch 측정 → **EPOCHS 60 확정**(§5.7) | `colab_v2_probe.py` | best55·수렴52·평평 (측정용, 버림) |
 | 2 | 학습 | v8 · C0·C3 각 5 seed = **10모델** (resumable) | `colab_v2_train.py` | `runs_phaseB/v8_{C0,C3}_s1..5/best.pt` |
 | 3 | **realfire 평가 (주지표)** | 프레임 1회 추출 → 10모델 예측 → **영상단위 C0 vs C3 평균±군집CI** | `colab_v2_eval.py` | `v2_eval/v2_eval_v8.json` |
 | 4 | ablation 가드 | 불꽃 제거 시 검출 붕괴 = 배경 아닌 불 봄 | `colab_ablation.py` | 콘솔 |

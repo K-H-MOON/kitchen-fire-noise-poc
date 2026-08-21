@@ -7,7 +7,8 @@
 #   - baseline 레시피 그대로 — 노이즈 증강 없음(노이즈는 v2 변수 아님).
 #   - train 을 두 경로 리스트로(2×) — v1 baseline 과 같은 스텝 수. 두 조건 모두 동일 →
 #     차이는 오직 데이터셋(synth_C0 vs synth_C3).
-#   - EPOCHS·IMGSZ·BATCH·PATIENCE·SEEDS v1 과 동일.
+#   - IMGSZ·BATCH·PATIENCE·SEEDS v1 과 동일. EPOCHS 는 프로브 측정으로 60 확정(v1 80).
+#     근거: docs/PREREGISTER_v2.md §5.7 (합성 val ~ep40 평평·수렴52·best55).
 #
 # 선행 — colab_synth.py 로 synth_C0 · synth_C3 가 생성돼 있어야 함.
 # 미러링 — ARCH 한 줄만 바꿔 v8 → v11 로 반복(Phase 2).
@@ -18,7 +19,7 @@ from google.colab import drive
 ARCH = 'yolov8s.pt'                  # ← v11 차례엔 'yolo11s.pt'
 CONDS = ['C0', 'C3']                 # 단일변수: 합성 방식
 SEEDS = [1, 2, 3, 4, 5]
-EPOCHS, IMGSZ, BATCH, PATIENCE = 80, 640, 16, 20
+EPOCHS, IMGSZ, BATCH, PATIENCE = 60, 640, 16, 20   # EPOCHS: 프로브 측정으로 확정(§5.7). v1 80 → 60
 
 FIRE = '/content/drive/MyDrive/fire_frames'
 RUNS = f'{FIRE}/runs_phaseB'         # Drive 저장 (resumable)
