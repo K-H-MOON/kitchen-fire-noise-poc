@@ -1,7 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 530" width="740" height="530" role="img" aria-label="검출을 되살린 모델이 헛불도 함께 올림. 검출률과 반드시 같이 읽어야 함. v11 실측.">
 <title>노이즈 강건성 — 헛불</title><desc>검출을 되살린 모델이 헛불도 함께 올림. 검출률과 반드시 같이 읽어야 함. v11 실측.</desc>
-<text x="14" y="265" transform="rotate(-90 14 265)" text-anchor="middle" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="11" fill="#888888">헛불률 (↓ 작을수록 좋음)</text>
-<text x="16" y="24" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="13" fill="#888888">① 배운 노이즈 조건</text>
+<text x="16" y="24" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="13" fill="#888888">① 학습한 노이즈 조건 · 헛불률 ↓ 작을수록 좋음</text>
 <rect x="16" y="37" width="11" height="11" rx="2" fill="#898781"/>
 <text x="32" y="46" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" fill="#888888">깨끗</text>
 <rect x="82" y="37" width="11" height="11" rx="2" fill="#e34948"/>
@@ -33,13 +32,13 @@
 <rect x="593.0" y="184.4" width="58" height="51.6" rx="4" fill="#1baf7a"/>
 <text x="622.0" y="179.4" text-anchor="middle" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="11" font-weight="500" fill="#888888">0.06</text>
 <text x="556.0" y="254.0" text-anchor="middle" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" fill="#888888">저조도</text>
-<text x="16" y="282" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="13" fill="#888888">② 안 배운 노이즈 조건</text>
+<text x="16" y="282" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="13" fill="#888888">② 학습하지 않은 노이즈 조건 · 헛불률 ↓</text>
 <rect x="16" y="295" width="11" height="11" rx="2" fill="#898781"/>
 <text x="32" y="304" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" fill="#888888">기존</text>
 <rect x="82" y="295" width="11" height="11" rx="2" fill="#eda100"/>
-<text x="98" y="304" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" fill="#888888">안 배운 채</text>
+<text x="98" y="304" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" fill="#888888">학습 안 함</text>
 <rect x="200" y="295" width="11" height="11" rx="2" fill="#1baf7a"/>
-<text x="216" y="304" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" fill="#888888">직접 배웠다면</text>
+<text x="216" y="304" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" fill="#888888">직접 학습했다면</text>
 <line x1="52" y1="494.0" x2="724" y2="494.0" stroke="#bdbdbd" stroke-width="1" opacity="0.35"/>
 <text x="46" y="498.0" text-anchor="end" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="11" fill="#888888">0.00</text>
 <line x1="52" y1="451.0" x2="724" y2="451.0" stroke="#bdbdbd" stroke-width="1" opacity="0.35"/>
