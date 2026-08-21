@@ -123,24 +123,21 @@ if not VIDEOS:
 # ---------------------------------------------------------------------------
 from torchvision import transforms as T
 IMAGENET = ([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-tf224 = T.Compose([T.Resize((224, 224)), T.ToTensor(), T.Normalize(*IMAGENET)])
+# 작은 불꽃 보존 — ViT 는 고해상(448) + 패치토큰 mean/max 풀링, CNN 은 conv맵 avg/max 풀링.
+# 전역 CLS/avgpool 하나만 쓰면 큰 프레임 속 작은 불꽃이 뭉개짐(v3 1차 sanity 실패 원인).
+RES_VIT = int(os.environ.get('RES_VIT', '448'))
+RES_CNN = int(os.environ.get('RES_CNN', '224'))
+def _tf(r):
+    return T.Compose([T.Resize((r, r)), T.ToTensor(), T.Normalize(*IMAGENET)])
 
-def _batched_torch(model, paths, bs=64):
-    model.eval().to(DEV)
-    out = []
-    with torch.no_grad():
-        for i in range(0, len(paths), bs):
-            ims = torch.stack([tf224(Image.open(p).convert('RGB')) for p in paths[i:i+bs]]).to(DEV)
-            f = model(ims)
-            if isinstance(f, (tuple, list)):
-                f = f[0]
-            out.append(f.float().cpu().numpy())
-    return np.concatenate(out, 0)
+def _load_batch(paths, r):
+    return torch.stack([_tf(r)(Image.open(p).convert('RGB')) for p in paths]).to(DEV)
 
 def load_dino():
-    """DINOv3 우선, 실패 시 DINOv2 폴백. (used_name, embed_fn) 반환."""
+    """DINOv3 우선, 실패 시 DINOv2 폴백. (used_name, embed_fn) 반환.
+    특징 = concat[CLS, mean(patch), max(patch)] (작은 불꽃 국소신호 보존)."""
+    pip('torchmetrics')                       # dinov3 hub 의존성(없으면 로드 실패했었음)
     forced = os.environ.get('DINO_HUB', '').strip()
-    trials = []
     if forced:
         trials = [(forced.split('/')[-1], forced.rsplit('/', 1)[0] if '/' in forced else 'facebookresearch/dinov3')]
     else:
@@ -149,37 +146,51 @@ def load_dino():
                   ('dinov2_vitb14', 'facebookresearch/dinov2')]
     for entry, repo in trials:
         try:
-            m = torch.hub.load(repo, entry, trust_repo=True)
-            print(f'  [DINO] torch.hub {repo}:{entry} 로드됨')
-            return entry, (lambda paths, _m=m: _batched_torch(_m, paths))
+            m = torch.hub.load(repo, entry, trust_repo=True).eval().to(DEV)
+            print(f'  [DINO] torch.hub {repo}:{entry} 로드됨 (res {RES_VIT})')
+            def embed(paths, _m=m):
+                out = []
+                with torch.no_grad():
+                    for i in range(0, len(paths), 32):
+                        x = _load_batch(paths[i:i+32], RES_VIT)
+                        f = _m.forward_features(x)              # dict: x_norm_clstoken · x_norm_patchtokens
+                        cls, pat = f['x_norm_clstoken'], f['x_norm_patchtokens']
+                        emb = torch.cat([cls, pat.mean(1), pat.amax(1)], 1)
+                        out.append(emb.float().cpu().numpy())
+                return np.concatenate(out, 0)
+            return entry, embed
         except Exception as e:
             print(f'  [DINO] {repo}:{entry} 실패 — {str(e)[:120]}')
     # HF transformers 폴백 (DINOv2 base — 게이트 없음)
     try:
         pip('transformers')
         from transformers import AutoModel
-        m = AutoModel.from_pretrained('facebook/dinov2-base')
+        m = AutoModel.from_pretrained('facebook/dinov2-base').eval().to(DEV)
         print('  [DINO] HF facebook/dinov2-base 로드됨(폴백)')
         def hf_embed(paths, _m=m):
-            _m.eval().to(DEV); out = []
+            out = []
             with torch.no_grad():
-                for i in range(0, len(paths), 64):
-                    ims = torch.stack([tf224(Image.open(p).convert('RGB'))
-                                       for p in paths[i:i+64]]).to(DEV)
-                    out.append(_m(ims).pooler_output.float().cpu().numpy())
+                for i in range(0, len(paths), 32):
+                    h = _m(_load_batch(paths[i:i+32], RES_VIT)).last_hidden_state
+                    cls, pat = h[:, 0], h[:, 1:]
+                    emb = torch.cat([cls, pat.mean(1), pat.amax(1)], 1)
+                    out.append(emb.float().cpu().numpy())
             return np.concatenate(out, 0)
         return 'dinov2-base(hf)', hf_embed
     except Exception as e:
         raise SystemExit(f'DINO 로드 전부 실패: {e}')
 
-def load_yolo_backbone(path, tag):
+def load_yolo_backbone(path, tag, allow_download=False):
     try:
         from ultralytics import YOLO
     except ImportError:
         pip('ultralytics'); from ultralytics import YOLO
-    if not os.path.exists(path):
+    if not allow_download and not os.path.exists(path):
         print(f'  [{tag}] {path} 없음 — 건너뜀'); return None
-    m = YOLO(path)
+    try:
+        m = YOLO(path)                          # COCO 가중치명이면 자동 다운로드
+    except Exception as e:
+        print(f'  [{tag}] 로드 실패 — {str(e)[:100]}'); return None
     def embed(paths, _m=m):
         out = []
         for i in range(0, len(paths), 64):
@@ -189,10 +200,19 @@ def load_yolo_backbone(path, tag):
     return embed
 
 def load_resnet():
+    """conv 특징맵(layer4, [B,2048,H,W]) → concat[avgpool, maxpool] (작은 불꽃 국소신호 보존)."""
     from torchvision import models
-    m = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2)
-    m.fc = torch.nn.Identity()
-    return lambda paths: _batched_torch(m, paths)
+    base = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2).eval().to(DEV)
+    feat = torch.nn.Sequential(*list(base.children())[:-2])   # avgpool·fc 제거 → 특징맵
+    def embed(paths):
+        out = []
+        with torch.no_grad():
+            for i in range(0, len(paths), 64):
+                fm = feat(_load_batch(paths[i:i+64], RES_CNN))   # [B,2048,H,W]
+                emb = torch.cat([fm.mean((2, 3)), fm.amax((2, 3))], 1)
+                out.append(emb.float().cpu().numpy())
+        return np.concatenate(out, 0)
+    return embed
 
 # 백본 등록 (순서 = 표에 나올 순서)
 BACKBONES = {}
@@ -203,7 +223,7 @@ if 'dino' in want:
 if 'yolo_synth' in want:
     fn = load_yolo_backbone(YOLO_SYNTH, 'YOLO_synth');  BACKBONES['YOLO(합성 v8_C0_s1)'] = fn if fn else None
 if 'yolo_coco' in want:
-    fn = load_yolo_backbone('yolov8s.pt', 'YOLO_coco'); BACKBONES['YOLO(COCO)'] = fn if fn else None
+    fn = load_yolo_backbone('yolov8s.pt', 'YOLO_coco', allow_download=True); BACKBONES['YOLO(COCO)'] = fn if fn else None
 if 'resnet' in want:
     BACKBONES['ResNet50(ImageNet)'] = load_resnet()
 BACKBONES = {k: v for k, v in BACKBONES.items() if v is not None}
@@ -336,9 +356,10 @@ try:
     plt.bar(range(len(names)), vals, yerr=cis, capsize=5,
             color=['#d1495b' if n == KEY_DINO else '#8d99ae' for n in names])
     plt.axhline(0.5, ls='--', c='k', lw=0.8, label='chance 0.5')
-    plt.xticks(range(len(names)), names, rotation=20, ha='right', fontsize=8)
-    plt.ylabel('realfire AUROC (영상단위 ± CI)'); plt.ylim(0, 1)
-    plt.title('v3 Phase 0 — 고정특징 합성→실제 전이'); plt.legend(fontsize=8)
+    labels_en = [n.replace('합성', 'synth').replace('영상단위', '') for n in names]
+    plt.xticks(range(len(names)), labels_en, rotation=20, ha='right', fontsize=8)
+    plt.ylabel('realfire AUROC (per-video +/- CI)'); plt.ylim(0, 1)
+    plt.title('v3 Phase 0 - frozen-feature synth->real transfer'); plt.legend(fontsize=8)
     plt.tight_layout(); plt.savefig(f'{OUT}/v3_probe.png', dpi=130)
     print(f'-> {OUT}/v3_probe.png  (미팅용 막대그림)')
 except Exception as e:
