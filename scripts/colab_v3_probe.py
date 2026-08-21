@@ -137,10 +137,53 @@ if EXTRA and os.path.isdir(EXTRA):
         return out
     fm, nm = _scan('fire'), _scan('nofire')
     print(f'realfire 확장(REALFIRE_EXTRA={EXTRA})...')
+
+    # --- 자동 스크리닝 (pre-reg v3 §5.1) — 중복 해시 제거·클래스 균형·소스수·지배 경고 ---
+    import hashlib
+    def _md5(p):
+        try:
+            return hashlib.md5(open(p, 'rb').read()).hexdigest()
+        except Exception:
+            return None
+    seen = set(); dropped = 0
+    def _dedup(paths):
+        nonlocal dropped
+        out = []
+        for p in paths:
+            h = _md5(p)
+            if h is None or h in seen:
+                dropped += (h is not None); continue
+            seen.add(h); out.append(p)
+        return out
+    for d in (fm, nm):
+        for sc in list(d):
+            d[sc] = _dedup(d[sc])
+    if dropped:
+        print(f'  [스크리닝] 중복 이미지 {dropped}장 제거(해시 일치)')
+
+    warn = []
+    n_fire = sum(len(v) for v in fm.values()); n_nof = sum(len(v) for v in nm.values())
+    n_src = len(set(fm) | set(nm))
+    if n_nof == 0:
+        warn.append('nofire 0장 — fpr/AUROC 무의미(하드네거티브 필요)')
+    elif n_fire and (max(n_fire, n_nof) > 3 * max(1, min(n_fire, n_nof))):
+        warn.append(f'클래스 불균형 fire {n_fire}·nofire {n_nof}(3:1 초과)')
+    if n_src < 5:
+        warn.append(f'독립 소스 {n_src}개(<5) — CI 개선 제한, 여전히 검정력 낮음')
+    for sc in set(fm) | set(nm):
+        tot = len(fm.get(sc, [])) + len(nm.get(sc, []))
+        if tot and tot > 0.6 * (n_fire + n_nof):
+            warn.append(f'소스 "{sc}"가 전체의 >60% — 의사반복 위험(장면 다양성↑ 필요)')
+
     for sc in sorted(set(fm) | set(nm)):
         key = f'extra_{sc}'
         RF[key] = {'fire': fm.get(sc, []), 'nofire': nm.get(sc, [])}
         print(f'  {key:<20} fire {len(RF[key]["fire"]):>4} · nofire {len(RF[key]["nofire"]):>4}')
+    print(f'  [스크리닝] 독립 소스 {n_src} · fire {n_fire} · nofire {n_nof}')
+    for w in warn:
+        print(f'  ⚠ [채택기준] {w}')
+    if warn:
+        print('  → pre-reg v3 §5.1 미달 항목 — 판정 시 이 한계를 명시할 것.')
 
 VIDEOS = list(RF.keys())
 if not VIDEOS:
