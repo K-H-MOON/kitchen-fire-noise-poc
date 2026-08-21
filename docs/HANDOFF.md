@@ -52,7 +52,8 @@ realfire 영상단위: **C0 0.237±0.213 · C3 0.223±0.188 · delta −0.014 �
 - 비교: DINOv3(폴백 DINOv2) vs YOLO(합성 v8_C0_s1) vs YOLO(COCO) vs ResNet50, 전부 고정특징+선형/kNN.
 - 주지표 realfire AUROC(영상단위±CI). 판정 GO(Δ≥+0.10) / NO-GO(|Δ|<0.05) / 애매 — pre-reg v3 §6.
 - 산출: Drive `fire_frames/v3_probe/v3_probe.json` + `v3_probe.png`(미팅 막대그림).
-- **함정:** DINOv3 가중치 게이트/다운로드 막히면 자동 DINOv2 폴백(로그에 used_dino 표기) — 가설은 동일 검증. 프로브는 학습 없음(고정) → GPU 몇 시간이면 충분, 10h는 여유.
+- **함정:** DINOv3 가중치는 **라이선스 게이트(fbaipublicfiles 403)** — torch.hub 익명 다운로드 불가. **진짜 DINOv3는 HF 인증 경로로만**: ① https://huggingface.co/facebook/dinov3-vitb16-pretrain-lvd1689m 에서 로그인 후 **라이선스 동의**, ② https://huggingface.co/settings/tokens 에서 read 토큰 생성, ③ Colab에서 실행 전 `import os; os.environ['HF_TOKEN']='hf_...'`(토큰은 본인만 — 공유 금지), ④ `%run colab_v3_probe.py`. 토큰 없으면 자동 DINOv2 폴백(로그 used_dino 표기). 프로브는 학습 없음(고정) → GPU 몇 시간, 10h 여유.
+- **1차·2차 런(2026-08-22) = 판정 보류**(DINOv2로만 돌아감·synth-val sanity<0.90). 실질 신호: 어떤 표현도 realfire 전이 우위 없음(DINO 순위 지표따라 1위↔꼴찌·kNN 우연·CI 거대), N=5 검정력 부족. 진짜 DINOv3 미검증 상태 → HF 경로로 재시도가 다음.
 - GO면 남은 시간에 (A) 고정백본 탐지 헤드 착수(보너스). 경계: 프로브=분류 proxy지 최종 탐지 아님·5영상 CI 큼.
 
 ## 미완 / loose end

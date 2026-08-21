@@ -137,13 +137,41 @@ def load_dino():
     """DINOv3 우선, 실패 시 DINOv2 폴백. (used_name, embed_fn) 반환.
     특징 = concat[CLS, mean(patch), max(patch)] (작은 불꽃 국소신호 보존)."""
     pip('torchmetrics')                       # dinov3 hub 의존성(없으면 로드 실패했었음)
+
+    # --- (신규·우선) HF DINOv3 — 게이트 모델. HF_TOKEN 필요(사용자가 라이선스 동의+토큰) ---
+    hf_repo = os.environ.get('DINOV3_HF', 'facebook/dinov3-vitb16-pretrain-lvd1689m')
+    token = os.environ.get('HF_TOKEN') or os.environ.get('HUGGINGFACE_TOKEN')
+    if hf_repo and hf_repo.lower() != 'skip':
+        for attempt in range(2):
+            try:
+                from transformers import AutoModel
+                m = AutoModel.from_pretrained(hf_repo, token=token).eval().to(DEV)
+                nreg = int(getattr(m.config, 'num_register_tokens', 0) or 0)
+                print(f'  [DINO] HF {hf_repo} 로드됨 (res {RES_VIT} · register {nreg})')
+                def embed(paths, _m=m, _nreg=nreg):
+                    out = []
+                    with torch.no_grad():
+                        for i in range(0, len(paths), 32):
+                            h = _m(_load_batch(paths[i:i+32], RES_VIT)).last_hidden_state
+                            cls, pat = h[:, 0], h[:, 1 + _nreg:]     # CLS · (레지스터 건너뜀) 패치
+                            out.append(torch.cat([cls, pat.mean(1), pat.amax(1)], 1).float().cpu().numpy())
+                    return np.concatenate(out, 0)
+                return hf_repo.split('/')[-1], embed
+            except Exception as e:
+                msg = str(e)
+                if attempt == 0 and ('dinov3' in msg.lower() or 'model type' in msg.lower() or 'Unrecognized' in msg):
+                    print('  [DINO] transformers 업그레이드 후 재시도...'); pip('-U', 'transformers'); continue
+                gated = '401' in msg or '403' in msg or 'gated' in msg.lower() or 'awaiting' in msg.lower()
+                hint = ' → HF 라이선스 동의+HF_TOKEN 설정 필요(아래 안내)' if gated else ''
+                print(f'  [DINO] HF {hf_repo} 실패 — {msg[:140]}{hint}')
+                break
+
+    # --- torch.hub 경로 (DINOv3 가중치는 403일 수 있음 → DINOv2로 폴백) ---
     forced = os.environ.get('DINO_HUB', '').strip()
     if forced:
         trials = [(forced.split('/')[-1], forced.rsplit('/', 1)[0] if '/' in forced else 'facebookresearch/dinov3')]
     else:
-        trials = [('dinov3_vitb16', 'facebookresearch/dinov3'),
-                  ('dinov3_vits16', 'facebookresearch/dinov3'),
-                  ('dinov2_vitb14', 'facebookresearch/dinov2')]
+        trials = [('dinov2_vitb14', 'facebookresearch/dinov2')]
     for entry, repo in trials:
         try:
             m = torch.hub.load(repo, entry, trust_repo=True).eval().to(DEV)
