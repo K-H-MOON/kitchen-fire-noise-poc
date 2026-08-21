@@ -2,7 +2,7 @@
 
 > **v2 Phase 1 완료. 결과 = C3 ≈ C0 (값진 음성 — 불꽃 현실성/다양성은 실제전이 병목이 아님).**
 > ✅ ① ablation 가드 완료(통과·지름길 아님) · ✅ ② 결과 문서화 완료(pre-reg §10 + README v2 결과 절).
-> **다음 = ③ realfire 확장 or 방향 전환(DINOv3 등) — 택1 결정부터.**
+> **✅ ③ 방향 결정: DINOv3(표현 축). Phase 0 프로브 설계·스크립트 완료 → 다음 = Colab에서 프로브 실행.**
 
 ## ✅ 이번 세션(2026-08-22) 완료
 - **ablation 가드 통과** — v8_C3_s1(합성 test 173양성·136음성): flame_rate 0.942 · bg_fp_rate 0.000 · 평균conf 불꽃0.739/배경0.000 · 음성오탐 0/136. → C3 모델은 불꽃을 필요로 함(지름길 아님). 음성이 "C3 망가짐"이 아니라 "진짜 전이 안 됨"임을 확정.
@@ -42,8 +42,18 @@ realfire 영상단위: **C0 0.237±0.213 · C3 0.223±0.188 · delta −0.014 �
 ## ★ 다음 세션 첫 작업
 0. **커밋/푸시** — 이번 세션 문서 변경(pre-reg §10 · README v2 결과 절 · 이 HANDOFF) 아직 미커밋.
 1. ~~ablation 가드~~ ✅ 완료(통과) · 2. ~~결과 문서화~~ ✅ 완료 (위 "이번 세션 완료" 참고).
-3. **택1(핵심 결정):** ② **realfire 확장**(Roboflow 유류화재 추가 · 학습0 · n↑ CI↓ · ≈ 확정) / ③ **방향 전환**(배경·씬 도메인갭 · temporal · 표현/백본 **DINOv3** — 팀 제안, 음성이라 이제 더 유력). **근거·팀 제안 정리는 pre-reg §11(triage v2 이후 갱신) 참고** — 남은 실질 레버 = DINOv3 하나, Roboflow는 ②/③ 결정에 딸린 옵션.
-   - DINOv3 착수 시 권장: 전면 재구축 전 **고정특징 선형 프로브**로 전이 개선 여부부터 싸게 검증(§11 주석).
+3. **결정됨 (2026-08-22): ③ DINOv3 방향 · Phase 0 프로브 먼저.** 10h GPU + 미팅 제약 → 전면 탐지기 재구축(A) 대신 **고정특징 전이 프로브**로 "표현 축이 답인가"만 싸게 단독 검증. 설계·성공기준 = **`docs/PREREGISTER_v3.md`**(결과 전 확정). 팀 제안 근거 = pre-reg v2 §11.
+
+### v3 Phase 0 프로브 실행 (Colab · L4)
+```python
+%run /content/kitchen-fire-noise-poc/scripts/colab_v3_probe.py
+# 선택 env: PROBE_BACKBONE='dino,yolo_synth,yolo_coco,resnet' · DINO_HUB='facebookresearch/dinov2/dinov2_vitb14'(강제) · MAX_PER_CLASS=1500
+```
+- 비교: DINOv3(폴백 DINOv2) vs YOLO(합성 v8_C0_s1) vs YOLO(COCO) vs ResNet50, 전부 고정특징+선형/kNN.
+- 주지표 realfire AUROC(영상단위±CI). 판정 GO(Δ≥+0.10) / NO-GO(|Δ|<0.05) / 애매 — pre-reg v3 §6.
+- 산출: Drive `fire_frames/v3_probe/v3_probe.json` + `v3_probe.png`(미팅 막대그림).
+- **함정:** DINOv3 가중치 게이트/다운로드 막히면 자동 DINOv2 폴백(로그에 used_dino 표기) — 가설은 동일 검증. 프로브는 학습 없음(고정) → GPU 몇 시간이면 충분, 10h는 여유.
+- GO면 남은 시간에 (A) 고정백본 탐지 헤드 착수(보너스). 경계: 프로브=분류 proxy지 최종 탐지 아님·5영상 CI 큼.
 
 ## 미완 / loose end
 - **Phase 2(v11 미러·성분분해 C1·C2)는 음성이라 기본 안 열림** — 방향 전환이 우선.
