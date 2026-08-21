@@ -1,61 +1,62 @@
-# HANDOFF — 다음 세션 이어가기 (2026-08-20 갱신)
+# HANDOFF — 다음 세션 이어가기 (2026-08-21 갱신)
 
-> v1 PoC 완료·문서화 끝. **방향 결정됨** (README 상단 배너): v2=실사 아틀라스(병행) · v3=시뮬레이션(전환).
-> **다음 작업 = v2 파이프라인 설계** (불꽃 다양성 + 합성 퀄리티 올리는 방안 → 파이프라인이 어떻게 바뀌나).
+> **v2 Phase 1 완료. 결과 = C3 ≈ C0 (값진 음성 — 불꽃 현실성/다양성은 실제전이 병목이 아님).**
+> 다음 = ① ablation 가드(음성 성격 확정) → ② 결과 문서화 → ③ realfire 확장 or 방향 전환.
 
 ## 한 줄 상황
-v1 결론: 합성 파이프라인이 **지름길 아닌 진짜 불꽃 검출기**(ablation 통과)·**노이즈 강건성 성립**·**v8≈v11**이나,
-**실제 불 전이 약함**(realfire **recall 0.31**·precision 0.80). 병목 = **합성 불꽃의 현실성·다양성**(납작한 컷아웃 + 소재 4종).
-→ **v2(실사 아틀라스+발광 합성)로 병목 공략**, v3(시뮬레이션)는 시뮬레이터 구축 동안 병행.
+v2(실사 아틀라스 + 발광 합성)로 **C0(컷아웃) vs C3(발광) 단일변수 A/B** 완료.
+realfire 영상단위: **C0 0.237±0.213 · C3 0.223±0.188 · delta −0.014 → C3 ≈ C0.**
+불꽃을 발광·다양하게 해도 실제 화재 전이가 안 올랐다 → **가설 기각(pre-reg §7 음성).**
+이전 kitchen-fire-poc(3D 아틀라스·셰이더로도 미해결)와 정합.
 
-## v1 핵심 수치 (팀 질문 답에도 씀)
-- 데이터: 배경 2,881(train 2,278/val 294/test 309, 사이트 단위) · 학습입력 train **4,556**(2× 증강) · **불꽃 소재 train 4종/test 2종** · realfire 검증셋 5영상(불꽃 286 + 발화전 244 프레임).
-- 지표: 합성 test mAP@0.5 ≈0.97 · **realfire recall 0.31**(88/286, 하한)·**precision ≈0.80**(88/110)·발화전 오탐 0.09(22/244). → **낮은 건 recall(놓침)이지 precision 아님.**
-- 모델: YOLOv8s(COCO-pretrained, 단일클래스 fire) + YOLO11s 미러(v8≈v11). 검증 = v8_baseline_s1.
+## v2 Phase 1 결과 (핵심 수치)
+- realfire 영상단위(5영상 · 각 5seed 평균 · ±군집CI): **C0 0.237±0.213 · C3 0.223±0.188.**
+- 헛불: C0 0.227±0.305 · C3 0.156±0.260 (C3 약간 낮으나 CI 큼).
+- 영상별(C0/C3): jikken 0.40/0.20 · tokyo 0.32/0.41 · kanetsu 0.10/0.18 · grease 0.36/0.32 · **hisomu 0.01/0.01**.
+  → **일관된 방향 없음(2↑ 2↓ 1tie)**. hisomu(거대 불꽃) 둘 다 ~0 = 사각(불꽃 종류 아닌 별개 문제).
+- **경계:** 영상 5개뿐 → CI 거대. "큰 효과 없음"은 확실, **작은 효과는 못 배제** → realfire 확장으로 확인 필요.
+- 실측 그림: `docs/img/v2_result_realfire.svg`. json: Drive `fire_frames/v2_eval/v2_eval_v8.json`(id 1AYlLBF2CVG5tlDOX4TL3VkAiOki8ATi2).
 
-## 로드맵 (README 최상단 배너에 정식 기재)
-- **v1 (완료)** — 실제 주방+합성 불꽃 학습 → 실제 화재 검증. 결과 0.31.
-- **v2 (기존 계획·병행)** — kitchen-fire-poc **실사 화염 아틀라스 + 발광 합성**으로 병목 공략. v1 하네스 재사용 → **~3~5일**(v1보다 짧음). 상세 `docs/PREREGISTER_v2.md`.
-- **v3 (전환)** — 시뮬레이션 주방화재 학습 → 합성 검증 (sim→합성→실제 커리큘럼). 시뮬레이터 구축에 시간 필요 → 구축 동안 v2 병행.
+## 완료된 것 (v2)
+- **S0** flamelib 390장·8소스(v01·02·03·05·06·07·09·10)·전부 RGBA (kitchen-fire-poc repo `assets/flamelib`). **0-overlap 통과**(스톡화염 ↔ realfire 튀김유화재).
+- **S1** `colab_synth.py` C0~C3 MODE 스택 + 가시성 게이트. 근거 pre-reg §5.5·§5.6·§5.7.
+- **S3** `synth_C0`·`synth_C3`(Drive). C0/C3 카운트 완전 동일(단일변수). train 1385양성/335하드네거/558음성.
+- **Phase 0** 컷아웃 vs 발광 육안 통과.
+- **Phase 1** 학습 10모델(v8 · C0·C3×5seed · EPOCHS=60 · `runs_phaseB/v8_{C0,C3}_s1..5`) + realfire 평가.
 
-## ★ 다음 세션 첫 작업 — v2 파이프라인 설계
-사용자가 "불꽃 다양성 + 합성 퀄리티를 올리면 파이프라인이 어떻게 되나"를 물음. 답해줄 v2 파이프라인:
-1. **S0 소재 확보**: 아틀라스는 **이미 확보** — kitchen-fire-poc repo `assets/flamelib`(**390 WebP · 8소스 v01·02·03·05·06·07·09·10 · 전부 RGBA 실알파**). Colab에서 `git clone` → `FLAME_ATLAS=/content/kitchen-fire-poc/assets/flamelib`. **분리 점검**: flamelib 원본 스톡화염 ↔ realfire 5영상 0 overlap 확인.
-2. **S1 합성 개선**(핵심): `colab_synth.py`(v1 컴포지터)에 **가산/스크린 블렌딩 · 엣지 페더 · 색보정 · 코어 블룸 · 가짜 조명 스필**(배경 글로우) 추가. + 불꽃 외형 증강(색/밝기/스케일 지터).
-3. **S2 Phase 0**(값쌈, 재학습 없음): 몇 장 합성 → `colab_flame_compare.py`로 v1 컷아웃과 육안 비교. 별로면 S1로 되돌림.
-4. **S3 합성 데이터**: C0(=v1)·C3(=풀 v2) synth 생성. 배경·분할 고정.
-5. **Phase 1 핵심 A/B**: `colab_phaseB_train.py`로 C0 vs C3(baseline·5seed=10모델) → `colab_realfire_test.py`(주지표)·`colab_ablation.py`(가드)·`colab_phaseB_eval.py`(노이즈 가드). **게이트: C3 realfire ≫ C0 → 진행 / ≈ → 병목은 불꽃 아님, 방향전환.**
-조건 C0~C3 정의·성공기준·해석트리 = `docs/PREREGISTER_v2.md`.
+## 스크립트 (scripts/)
+- `colab_synth.py`(C0~C3+게이트) · `colab_v2_train.py`(10모델·resumable) · `colab_v2_eval.py`(realfire 영상단위±CI·판정)
+- `colab_v2_probe.py`(epoch 측정→60·버림) · `colab_v2_ablation.py`(지름길 가드) · `colab_overlap_check.py`(0-overlap)
+- 로컬 생성기(scratchpad, 미커밋): `gen_v2_result_svg.py`(eval json → v2_result_realfire.svg) · `gen_svgs.py`(노이즈 강건성 SVG)
 
-## 이번 세션 추가 스크립트 (scripts/)
-- `colab_flame_compare.py` — 3단 비교(A 우리합성 · B 실제불 자동검출 · C 아틀라스). `FLAME_ATLAS`=flamelib. 문서 삽화 `docs/img/flame_compare.jpg`.
-- `colab_noise_examples.py` — 노이즈 9종 그리드(한글 라벨·설명, NanumGothic 자동설치). `docs/img/noise_grid.jpg`.
-- (기존 v1: `colab_phaseB_train/eval.py`, `colab_ablation.py`, `colab_realfire_test.py`, `colab_synth.py`, `noise_lib.py`, `real_fire.json`.)
+## 결정 기록 (docs/PREREGISTER_v2.md)
+- §5.5 라벨박스=**알파bbox 고정** · 블렌딩=**스크린+코어블룸** (밝은 급식실서 가산은 클리핑)
+- §5.6 아틀라스 분할 **train 348(6소스) / test 42(v05·v09 held-out)** — 이미지 분할과 매칭
+- §5.7 **EPOCHS 60** (프로브 측정: best55·수렴52·val ep40 후 평평 → 80은 과함)
 
-## 저장소 문서 상태 (전부 커밋·푸시됨, main)
-- `README.md`: 상단 **방향 전환 배너(v1/v2/v3)** · 결과 요약(성과/한계/**병목 관찰+3단 삽화**/외적타당성/요약) · 노이즈 9종 그리드 삽화 · **v2 상세** 절.
-- `docs/TIMELINE.md`: v1 전 과정 + 결과 + 최종 결론.
-- `docs/PREREGISTER_v2.md`: v2 사전등록(착시 차단·C0~C3·성공기준·Phase). 아틀라스 flamelib 회수 반영됨.
-- `docs/img/`: flame_compare.jpg(3단), noise_grid.jpg.
+## ★ 다음 세션 첫 작업
+1. **ablation 가드 (아직 안 돌림)** — v8_C3_s1이 **합성 분포 안에선 여전히 불을 보는지** 확인(음성이 "C3 망가짐"이 아니라 "진짜 전이 안 됨"임을 확정).
+   ```python
+   import os; os.environ['ABLATION_MODEL']='v8_C3_s1'
+   %run /content/kitchen-fire-noise-poc/scripts/colab_v2_ablation.py   # 비교: v8_C0_s1
+   ```
+2. **결과 문서화 (아직 안 함)** — pre-reg §10 결과 채움 + README v2 결과 절(음성 정직 기록) + `v2_result_realfire.svg` 링크.
+3. **택1:** ② **realfire 확장**(Roboflow 유류화재 추가 · 학습0 · n↑ CI↓ · ≈ 확정) / ③ **방향 전환**(배경·씬 도메인갭 · temporal · 표현/백본 **DINOv3** — 팀 제안, 음성이라 이제 더 유력).
 
 ## 미완 / loose end
-- **팀 공유용 아티팩트** — 팀원이 물은 "데이터규모·지표·모델" 3질문 답을 슬라이드로 만드는 중이었음. `scratchpad/fire_recall_qa.html` 작성됨(Q1 데이터/Q2 recall·precision/Q3 모델 표 + 병목 결론 + flame_compare 이미지 자리). **아직 이미지 임베드·발행 안 함.** 원하면 다음 세션에서 base64 임베드 후 Artifact로 발행. (내용은 위 'v1 핵심 수치'와 동일.)
+- **Phase 2(v11 미러·성분분해 C1·C2)는 음성이라 기본 안 열림** — 방향 전환이 우선.
+- pre-reg §10·README v2 결과 절 미작성.
+- ablation 미실행.
 
-## Colab 재개 (seochorobotics · GPU · 매 런타임 clone)
-```python
-from google.colab import drive; drive.mount('/content/drive')
-```
+## Colab 재개 (seochorobotics · L4 GPU · 매 런타임 clone)
 ```bash
 !rm -rf /content/kitchen-fire-noise-poc && git clone https://github.com/K-H-MOON/kitchen-fire-noise-poc.git /content/kitchen-fire-noise-poc
-!rm -rf /content/kitchen-fire-poc && git clone https://github.com/K-H-MOON/kitchen-fire-poc.git /content/kitchen-fire-poc   # v2 아틀라스(flamelib)
+!rm -rf /content/kitchen-fire-poc && git clone https://github.com/K-H-MOON/kitchen-fire-poc.git /content/kitchen-fire-poc   # 아틀라스
 ```
+- 학습 10모델: Drive `fire_frames/runs_phaseB/v8_C0_s1..s5 · v8_C3_s1..s5` (best.pt 저장됨).
+- realfire 영상: Drive `smoke_frames` (`real_fire.json` src_dir). 5영상 fire/nofire.
 
 ## 함정
-- **Drive `fire_project`(kitchen-fire-poc 데이터) 비어 있음** — 아틀라스는 **repo `assets/flamelib`에 살아있음**(그걸 씀). Drive 아님.
-- **절차적 셰이더(v3) 코드는 repo에 없음**(에셋 전용) — Drive `fire_test1.ipynb`에 있을 수도 / v3 때 새로 작성 가능.
-- Colab `/content` 런타임마다 초기화 → 매번 clone. runs_phaseB 등 산출물은 Drive에 영속.
-- **Claude Drive MCP는 이미지 픽셀 못 봄** — 시트·삽화는 사용자가 채팅에 첨부해야 Claude가 봄. (로컬 파일은 Read로 봄.)
-- 파일명 한글/일본어 → NFC 정규화.
-
-## 작업 방식 (사용자 선호)
-옵션은 trade-off와 함께 제시·사용자 결정·**과장 금지·한계 정직**. **모든 답변에서 주장의 경계 명시.** 판정은 seed/CI로, 착시(같은 텍스처)·의사반복(프레임 상관) 경계. clean을 성능으로 오독 금지.
+- **프로브**(`colab_v2_probe.py` · `/content/probe` · 측정용·버림)와 **본 학습**(`colab_v2_train.py` · `runs_phaseB` · 10모델) **혼동 주의** — 둘 다 v8_C0_s1로 시작함.
+- Drive 커넥터로 json/csv 텍스트는 읽힘(이미지 픽셀은 못 봄 → 시트는 채팅 첨부).
+- 작업 방식: 옵션+trade-off·사용자 결정·**과장 금지·주장 경계 명시**. clean/합성분포 성적을 전이로 오독 금지.

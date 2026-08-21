@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 554" width="740" height="554" role="img" aria-label="v2 Phase 1 — C0(컷아웃) vs C3(발광)의 실제 화재 검출률(영상단위 평균 ±군집CI)과 발화전 헛불 비교. 점=평균, 세로선=CI, 옅은 점=영상 5개.">
+<title>v2 결과 — C0 vs C3 realfire</title><desc>v2 Phase 1 — C0(컷아웃) vs C3(발광)의 실제 화재 검출률(영상단위 평균 ±군집CI)과 발화전 헛불 비교. 점=평균, 세로선=CI, 옅은 점=영상 5개.</desc>
+<text x="16" y="24" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="13" fill="#888888">실제 화재 검출률 (영상단위) · ↑ 클수록 좋음</text>
+<line x1="16" y1="42" x2="27" y2="42" stroke="#898781" stroke-width="3"/>
+<circle cx="21" cy="42" r="4" fill="#898781"/>
+<text x="33" y="46" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" fill="#888888">C0 컷아웃(v1식)</text>
+<line x1="196" y1="42" x2="207" y2="42" stroke="#1baf7a" stroke-width="3"/>
+<circle cx="201" cy="42" r="4" fill="#1baf7a"/>
+<text x="213" y="46" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" fill="#888888">C3 발광(v2)</text>
+<circle cx="356" cy="42" r="3.5" fill="#333333" opacity="0.5"/>
+<text x="368" y="46" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" fill="#888888">영상 5개</text>
+<line x1="52" y1="236.0" x2="724" y2="236.0" stroke="#bdbdbd" stroke-width="1" opacity="0.35"/>
+<text x="46" y="240.0" text-anchor="end" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="11" fill="#888888">0.00</text>
+<line x1="52" y1="201.6" x2="724" y2="201.6" stroke="#bdbdbd" stroke-width="1" opacity="0.35"/>
+<text x="46" y="205.6" text-anchor="end" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="11" fill="#888888">0.20</text>
+<line x1="52" y1="167.2" x2="724" y2="167.2" stroke="#bdbdbd" stroke-width="1" opacity="0.35"/>
+<text x="46" y="171.2" text-anchor="end" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="11" fill="#888888">0.40</text>
+<line x1="52" y1="132.8" x2="724" y2="132.8" stroke="#bdbdbd" stroke-width="1" opacity="0.35"/>
+<text x="46" y="136.8" text-anchor="end" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="11" fill="#888888">0.60</text>
+<line x1="52" y1="98.4" x2="724" y2="98.4" stroke="#bdbdbd" stroke-width="1" opacity="0.35"/>
+<text x="46" y="102.4" text-anchor="end" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="11" fill="#888888">0.80</text>
+<line x1="52" y1="64.0" x2="724" y2="64.0" stroke="#bdbdbd" stroke-width="1" opacity="0.35"/>
+<text x="46" y="68.0" text-anchor="end" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="11" fill="#888888">1.00</text>
+<line x1="52" y1="236" x2="724" y2="236" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="186.0" cy="167.2" r="3" fill="#898781" opacity="0.4"/>
+<circle cx="193.0" cy="181.5" r="3" fill="#898781" opacity="0.4"/>
+<circle cx="200.0" cy="218.3" r="3" fill="#898781" opacity="0.4"/>
+<circle cx="207.0" cy="174.7" r="3" fill="#898781" opacity="0.4"/>
+<circle cx="214.0" cy="234.7" r="3" fill="#898781" opacity="0.4"/>
+<line x1="220.0" y1="158.6" x2="220.0" y2="232.0" stroke="#333333" stroke-width="2"/>
+<line x1="213.0" y1="158.6" x2="227.0" y2="158.6" stroke="#333333" stroke-width="2"/>
+<line x1="213.0" y1="232.0" x2="227.0" y2="232.0" stroke="#333333" stroke-width="2"/>
+<circle cx="220.0" cy="195.3" r="6" fill="#898781"/>
+<text x="232.0" y="199.3" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" font-weight="500" fill="#888888">0.24 ± 0.21</text>
+<text x="220.0" y="254.0" text-anchor="middle" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" fill="#888888">C0 컷아웃</text>
+<circle cx="522.0" cy="201.2" r="3" fill="#1baf7a" opacity="0.4"/>
+<circle cx="529.0" cy="166.1" r="3" fill="#1baf7a" opacity="0.4"/>
+<circle cx="536.0" cy="204.7" r="3" fill="#1baf7a" opacity="0.4"/>
+<circle cx="543.0" cy="181.4" r="3" fill="#1baf7a" opacity="0.4"/>
+<circle cx="550.0" cy="234.7" r="3" fill="#1baf7a" opacity="0.4"/>
+<line x1="556.0" y1="165.3" x2="556.0" y2="229.9" stroke="#333333" stroke-width="2"/>
+<line x1="549.0" y1="165.3" x2="563.0" y2="165.3" stroke="#333333" stroke-width="2"/>
+<line x1="549.0" y1="229.9" x2="563.0" y2="229.9" stroke="#333333" stroke-width="2"/>
+<circle cx="556.0" cy="197.6" r="6" fill="#1baf7a"/>
+<text x="568.0" y="201.6" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" font-weight="500" fill="#888888">0.22 ± 0.19</text>
+<text x="556.0" y="254.0" text-anchor="middle" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" fill="#888888">C3 발광</text>
+<text x="16" y="276" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" font-weight="500" fill="#333333">C3 − C0 = -0.01 · CI 겹침 → C3 ≈ C0 (병목은 불꽃 아님, 값진 음성)</text>
+<text x="16" y="308" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="13" fill="#888888">발화전 헛불 · ↓ 작을수록 좋음</text>
+<line x1="16" y1="326" x2="27" y2="326" stroke="#898781" stroke-width="3"/>
+<circle cx="21" cy="326" r="4" fill="#898781"/>
+<text x="33" y="330" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" fill="#888888">C0</text>
+<line x1="84" y1="326" x2="95" y2="326" stroke="#1baf7a" stroke-width="3"/>
+<circle cx="89" cy="326" r="4" fill="#1baf7a"/>
+<text x="101" y="330" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" fill="#888888">C3</text>
+<line x1="52" y1="520.0" x2="724" y2="520.0" stroke="#bdbdbd" stroke-width="1" opacity="0.35"/>
+<text x="46" y="524.0" text-anchor="end" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="11" fill="#888888">0.00</text>
+<line x1="52" y1="462.7" x2="724" y2="462.7" stroke="#bdbdbd" stroke-width="1" opacity="0.35"/>
+<text x="46" y="466.7" text-anchor="end" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="11" fill="#888888">0.20</text>
+<line x1="52" y1="405.3" x2="724" y2="405.3" stroke="#bdbdbd" stroke-width="1" opacity="0.35"/>
+<text x="46" y="409.3" text-anchor="end" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="11" fill="#888888">0.40</text>
+<line x1="52" y1="348.0" x2="724" y2="348.0" stroke="#bdbdbd" stroke-width="1" opacity="0.35"/>
+<text x="46" y="352.0" text-anchor="end" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="11" fill="#888888">0.60</text>
+<line x1="52" y1="520" x2="724" y2="520" stroke="#9a9a9a" stroke-width="1"/>
+<line x1="220.0" y1="367.5" x2="220.0" y2="520.0" stroke="#333333" stroke-width="2"/>
+<line x1="213.0" y1="367.5" x2="227.0" y2="367.5" stroke="#333333" stroke-width="2"/>
+<line x1="213.0" y1="520.0" x2="227.0" y2="520.0" stroke="#333333" stroke-width="2"/>
+<circle cx="220.0" cy="454.9" r="6" fill="#898781"/>
+<text x="232.0" y="458.9" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" font-weight="500" fill="#888888">0.23 ± 0.30</text>
+<text x="220.0" y="538.0" text-anchor="middle" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" fill="#888888">C0</text>
+<line x1="556.0" y1="400.7" x2="556.0" y2="520.0" stroke="#333333" stroke-width="2"/>
+<line x1="549.0" y1="400.7" x2="563.0" y2="400.7" stroke="#333333" stroke-width="2"/>
+<line x1="549.0" y1="520.0" x2="563.0" y2="520.0" stroke="#333333" stroke-width="2"/>
+<circle cx="556.0" cy="475.4" r="6" fill="#1baf7a"/>
+<text x="568.0" y="479.4" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" font-weight="500" fill="#888888">0.16 ± 0.26</text>
+<text x="556.0" y="538.0" text-anchor="middle" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="12" fill="#888888">C3</text>
+</svg>
