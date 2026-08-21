@@ -1,7 +1,12 @@
-# HANDOFF — 다음 세션 이어가기 (2026-08-21 갱신)
+# HANDOFF — 다음 세션 이어가기 (2026-08-22 갱신)
 
 > **v2 Phase 1 완료. 결과 = C3 ≈ C0 (값진 음성 — 불꽃 현실성/다양성은 실제전이 병목이 아님).**
-> 다음 = ① ablation 가드(음성 성격 확정) → ② 결과 문서화 → ③ realfire 확장 or 방향 전환.
+> ✅ ① ablation 가드 완료(통과·지름길 아님) · ✅ ② 결과 문서화 완료(pre-reg §10 + README v2 결과 절).
+> **다음 = ③ realfire 확장 or 방향 전환(DINOv3 등) — 택1 결정부터.**
+
+## ✅ 이번 세션(2026-08-22) 완료
+- **ablation 가드 통과** — v8_C3_s1(합성 test 173양성·136음성): flame_rate 0.942 · bg_fp_rate 0.000 · 평균conf 불꽃0.739/배경0.000 · 음성오탐 0/136. → C3 모델은 불꽃을 필요로 함(지름길 아님). 음성이 "C3 망가짐"이 아니라 "진짜 전이 안 됨"임을 확정.
+- **문서화 완료** — `docs/PREREGISTER_v2.md §10` 결과 채움 + 상단 상태줄 갱신 · `README.md` "v2 결과" 절 신설(SVG 링크 포함) + 상단 로드맵 v2 줄 갱신. **아직 커밋 안 함 — 커밋/푸시 필요.**
 
 ## 한 줄 상황
 v2(실사 아틀라스 + 발광 합성)로 **C0(컷아웃) vs C3(발광) 단일변수 A/B** 완료.
@@ -35,18 +40,14 @@ realfire 영상단위: **C0 0.237±0.213 · C3 0.223±0.188 · delta −0.014 �
 - §5.7 **EPOCHS 60** (프로브 측정: best55·수렴52·val ep40 후 평평 → 80은 과함)
 
 ## ★ 다음 세션 첫 작업
-1. **ablation 가드 (아직 안 돌림)** — v8_C3_s1이 **합성 분포 안에선 여전히 불을 보는지** 확인(음성이 "C3 망가짐"이 아니라 "진짜 전이 안 됨"임을 확정).
-   ```python
-   import os; os.environ['ABLATION_MODEL']='v8_C3_s1'
-   %run /content/kitchen-fire-noise-poc/scripts/colab_v2_ablation.py   # 비교: v8_C0_s1
-   ```
-2. **결과 문서화 (아직 안 함)** — pre-reg §10 결과 채움 + README v2 결과 절(음성 정직 기록) + `v2_result_realfire.svg` 링크.
-3. **택1:** ② **realfire 확장**(Roboflow 유류화재 추가 · 학습0 · n↑ CI↓ · ≈ 확정) / ③ **방향 전환**(배경·씬 도메인갭 · temporal · 표현/백본 **DINOv3** — 팀 제안, 음성이라 이제 더 유력).
+0. **커밋/푸시** — 이번 세션 문서 변경(pre-reg §10 · README v2 결과 절 · 이 HANDOFF) 아직 미커밋.
+1. ~~ablation 가드~~ ✅ 완료(통과) · 2. ~~결과 문서화~~ ✅ 완료 (위 "이번 세션 완료" 참고).
+3. **택1(핵심 결정):** ② **realfire 확장**(Roboflow 유류화재 추가 · 학습0 · n↑ CI↓ · ≈ 확정) / ③ **방향 전환**(배경·씬 도메인갭 · temporal · 표현/백본 **DINOv3** — 팀 제안, 음성이라 이제 더 유력).
 
 ## 미완 / loose end
 - **Phase 2(v11 미러·성분분해 C1·C2)는 음성이라 기본 안 열림** — 방향 전환이 우선.
-- pre-reg §10·README v2 결과 절 미작성.
-- ablation 미실행.
+- ~~pre-reg §10·README v2 결과 절 미작성~~ ✅ · ~~ablation 미실행~~ ✅.
+- **문서 변경 커밋/푸시 남음** (2026-08-22 세션 산출).
 
 ## Colab 재개 (seochorobotics · L4 GPU · 매 런타임 clone)
 ```bash
