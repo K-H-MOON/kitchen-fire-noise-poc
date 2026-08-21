@@ -50,6 +50,8 @@ df.columns = [c.strip() for c in df.columns]
 ran = len(df)
 mcol = (next((c for c in df.columns if 'mAP50-95' in c), None)
         or next((c for c in df.columns if 'mAP50' in c), None))
+if mcol is None or 'epoch' not in df.columns:      # ultralytics 버전 바뀌어 열 이름 예상 밖이면
+    raise SystemExit(f'results.csv 형식 예상 밖(ultralytics 버전?) — 열 목록: {list(df.columns)}')
 best_i = int(df[mcol].idxmax())
 best_ep = int(df['epoch'].iloc[best_i]); best_v = float(df[mcol].max())
 conv = int(df[df[mcol] >= best_v * 0.99]['epoch'].min())     # best 의 99% 첫 도달 = 사실상 수렴
