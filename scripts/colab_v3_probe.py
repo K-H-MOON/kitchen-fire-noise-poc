@@ -114,6 +114,34 @@ def extract_realfire():
 
 print('realfire 프레임 추출(캐시)...')
 RF = extract_realfire()
+
+# --- (B) realfire 확장 — 추가 실제 화재 이미지로 검정력↑ (Roboflow 등, 학습 0) ---
+# REALFIRE_EXTRA 폴더 구조:  <dir>/fire/<source>/*.jpg · <dir>/nofire/<source>/*.jpg
+#   각 <source> 하위폴더 = 독립 '씬'(군집 CI 단위). 하위폴더 없으면 통째로 1 씬(extra).
+# 이렇게 하면 pooled 표본↑ + 군집 수↑ → v3 1·2차의 N=5 거대 CI 를 좁힘.
+EXTRA = os.environ.get('REALFIRE_EXTRA', '').strip()
+if EXTRA and os.path.isdir(EXTRA):
+    def _scan(kind):
+        base = f'{EXTRA}/{kind}'; out = {}
+        if not os.path.isdir(base):
+            return out
+        subs = [d for d in sorted(glob.glob(f'{base}/*')) if os.path.isdir(d)]
+        if subs:
+            for d in subs:
+                out[os.path.basename(d)] = sorted(glob.glob(f'{d}/*.jpg') + glob.glob(f'{d}/*.png') +
+                                                  glob.glob(f'{d}/*.jpeg'))
+        else:
+            flat = sorted(glob.glob(f'{base}/*.jpg') + glob.glob(f'{base}/*.png') + glob.glob(f'{base}/*.jpeg'))
+            if flat:
+                out['_flat'] = flat
+        return out
+    fm, nm = _scan('fire'), _scan('nofire')
+    print(f'realfire 확장(REALFIRE_EXTRA={EXTRA})...')
+    for sc in sorted(set(fm) | set(nm)):
+        key = f'extra_{sc}'
+        RF[key] = {'fire': fm.get(sc, []), 'nofire': nm.get(sc, [])}
+        print(f'  {key:<20} fire {len(RF[key]["fire"]):>4} · nofire {len(RF[key]["nofire"]):>4}')
+
 VIDEOS = list(RF.keys())
 if not VIDEOS:
     raise SystemExit('realfire 영상이 없음 — real_fire.json 확인')
