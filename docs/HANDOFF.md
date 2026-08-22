@@ -53,8 +53,9 @@ realfire 영상단위: **C0 0.237±0.213 · C3 0.223±0.188 · delta −0.014 �
 - 주지표 realfire AUROC(영상단위±CI). 판정 GO(Δ≥+0.10) / NO-GO(|Δ|<0.05) / 애매 — pre-reg v3 §6.
 - 산출: Drive `fire_frames/v3_probe/v3_probe.json` + `v3_probe.png`(미팅 막대그림).
 - **함정:** DINOv3 가중치는 **라이선스 게이트(fbaipublicfiles 403)** — torch.hub 익명 다운로드 불가. **진짜 DINOv3는 HF 인증 경로로만**: ① https://huggingface.co/facebook/dinov3-vitb16-pretrain-lvd1689m 에서 로그인 후 **라이선스 동의**, ② https://huggingface.co/settings/tokens 에서 read 토큰 생성, ③ Colab에서 실행 전 `import os; os.environ['HF_TOKEN']='hf_...'`(토큰은 본인만 — 공유 금지), ④ `%run colab_v3_probe.py`. 토큰 없으면 자동 DINOv2 폴백(로그 used_dino 표기). 프로브는 학습 없음(고정) → GPU 몇 시간, 10h 여유.
-- **1·2차(DINOv2) = 판정 보류**(v3 로드 실패). **3차 = 진짜 DINOv3-vitb16 실행됨**(HF 인증·register 4): realfire AUROC 0.660±0.348 · **kNN 0.660(유일하게 우연 초과=진짜 신호, DINOv2는 0.500 가짜)** · Δ vs YOLO_synth +0.037(GO +0.10 미달) · sanity 0.896<0.90(근소) → **공식 보류, 실질="진짜지만 작은 신호"**. 완전 기각도 유력도 아닌 경계 → 이 증거만으론 탐지기 착수 근거 부족. 상세 pre-reg v3 §8·MEETING_v3_probe.md.
-- **다음 후보 수(택):** ① 더 큰 DINOv3 `os.environ['DINOV3_HF']='facebook/dinov3-vitl16-pretrain-lvd1689m'` 재실행(스케일 시 신호 커지나) · ② realfire 확장 N↑(+0.037 실재/노이즈 판별, 이제 edge 있어 정당) · ③ 씬/temporal 피벗.
+- **진짜 DINOv3 base·large 실행 완료**(HF 인증·register 4). vitb16: realfire 0.660±0.348·kNN 0.660·Δ+0.037. **vitl16: 0.676±0.287·kNN 0.649·Δ+0.052.** **스케일 3.5배→ realfire +0.016뿐(비확장).** sanity 둘 다 <0.90(0.896·0.882) → **공식 보류.**
+- **실질 결론: 표현 축은 "진짜지만 작고 비확장" 신호 → 전이 병목 레버 아님.** DINOv3만 kNN~0.65로 우연 초과(진짜 신호, DINOv2는 0.500 가짜)나, 두 스케일 모두 GO(+0.10) 근처도 못 감. → **DINOv3 탐지기 착수 근거 약함.** 상세 pre-reg v3 §8·MEETING_v3_probe.md.
+- **다음 = ③ 씬·도메인·temporal 피벗 권장.** (v2 불꽃 아님 + v3 표현도 레버 아님 → 병목은 씬/도메인갭/시간축). 표현 축 종료 권장(재방문 여지만), realfire 확장은 GO 미달이라 우선순위 낮음.
 - **DINOv3 승인 대기 상태**: HF 라이선스 동의·요청 제출됨, **Meta 수동 승인 대기**(즉시 아님). 상태 확인 https://huggingface.co/settings/gated-repos → Accepted 되면 토큰 넣고 재실행.
 - **미팅 브리프**: `docs/MEETING_v3_probe.md`(현재까지 정직 요약·결정지점).
 
