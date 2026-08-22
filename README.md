@@ -1,3 +1,5 @@
+> 📄 **미팅용 전체 요약 → [SUMMARY_meeting.md](docs/SUMMARY_meeting.md)** · **상세 서사·파이프라인 도식 → [DETAIL.md](docs/DETAIL.md)** · v3 결과·반론 → [MEETING_v3_probe.md](docs/MEETING_v3_probe.md)
+
 # 🔄 프로젝트 방향 전환 제안 (2026-08-20)
 
 **v1 (완료)** — 실제 주방 사진에 불꽃을 **합성**해 학습 → **실제 화재로 검증**.
