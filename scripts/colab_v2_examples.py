@@ -52,8 +52,8 @@ def _screen(bg, fg):
 def _luma(x):
     return x[..., 0] * 0.299 + x[..., 1] * 0.587 + x[..., 2] * 0.114
 
-def _feather(a, s):
-    return cv2.GaussianBlur(a, (0, 0), sigmaX=max(s, 0.1))
+def _feather(a, sigma):
+    return cv2.GaussianBlur(a, (0, 0), sigmaX=max(sigma, 0.1))
 
 def _color_correct(fg, bgm, strength=0.15):
     cast = bgm - bgm.mean()
