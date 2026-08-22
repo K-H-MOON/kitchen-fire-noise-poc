@@ -207,6 +207,16 @@ epoch 를 튜닝하면 held-out 이 오염되므로 안 함). "합성 과제를 
 **영상별 (C0 / C3):** jikken 0.40/0.20 · tokyo 0.32/0.41 · kanetsu 0.10/0.18 · grease 0.36/0.32 · hisomu 0.01/0.01.
 → **일관된 방향 없음 (2↑ 2↓ 1 tie).** hisomu(거대 불꽃)는 C0·C3 둘 다 ~0 = 불꽃 종류가 아닌 **별개의 사각**.
 
+**부지표 — recall·precision (프레임 단위·5영상 풀링·seed 평균, v1과 동일 정의, `colab_v2_precision.py` 2026-08-22):**
+recall = fire_det/fire_tot · precision = fire_det/(fire_det+nof_det). realfire 불 286 : 무화재 244(≈1:1).
+
+| | recall | precision |
+|---|---|---|
+| C0 | 0.271 ± 0.030 | 0.572 ± 0.132 |
+| C3 | 0.241 ± 0.067 | 0.676 ± 0.170 |
+
+→ **recall(놓침)이 문제**(둘 다 ~0.25, 실제 불의 ~75% 놓침). C3(발광)은 precision↑(헛불↓, fp_rate와 정합)이나 recall은 못 올림. **v1(0.31/0.80)과 직접 비교 금물**(표본·모델·불:무화재 비율 다름). json `v2_eval/v2_precision_v8.json`.
+
 **가드 — ablation (2026-08-21, v8_C3_s1, 합성 test 173양성·136음성):**
 
 | 지표 | 값 | 판정 |
