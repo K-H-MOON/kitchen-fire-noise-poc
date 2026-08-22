@@ -145,21 +145,20 @@ if EXTRA and os.path.isdir(EXTRA):
             return hashlib.md5(open(p, 'rb').read()).hexdigest()
         except Exception:
             return None
-    seen = set(); dropped = 0
+    seen = set(); drop = [0]
     def _dedup(paths):
-        nonlocal dropped
         out = []
         for p in paths:
             h = _md5(p)
             if h is None or h in seen:
-                dropped += (h is not None); continue
+                drop[0] += (h is not None); continue
             seen.add(h); out.append(p)
         return out
     for d in (fm, nm):
         for sc in list(d):
             d[sc] = _dedup(d[sc])
-    if dropped:
-        print(f'  [스크리닝] 중복 이미지 {dropped}장 제거(해시 일치)')
+    if drop[0]:
+        print(f'  [스크리닝] 중복 이미지 {drop[0]}장 제거(해시 일치)')
 
     warn = []
     n_fire = sum(len(v) for v in fm.values()); n_nof = sum(len(v) for v in nm.values())
