@@ -19,6 +19,10 @@
 import os, glob, json, subprocess, sys, unicodedata, random
 import numpy as np
 
+# HF 다운로드 인코딩/xet 문제 회피 (vitl16 등에서 'ascii codec' 에러 방지)
+os.environ.setdefault('HF_HUB_DISABLE_XET', '1')
+os.environ.setdefault('PYTHONUTF8', '1')
+
 def pip(*pkgs):
     subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', *pkgs], check=False)
 
@@ -215,7 +219,14 @@ def load_dino():
         for attempt in range(2):
             try:
                 from transformers import AutoModel
-                m = AutoModel.from_pretrained(hf_repo, token=token).eval().to(DEV)
+                try:
+                    m = AutoModel.from_pretrained(hf_repo, token=token)
+                except Exception as e1:
+                    print(f'  [DINO] from_pretrained 직접 실패({str(e1)[:60]}) → snapshot 우회 재시도')
+                    from huggingface_hub import snapshot_download
+                    local = snapshot_download(hf_repo, token=token)   # xet 우회·로컬 후 로드
+                    m = AutoModel.from_pretrained(local)
+                m = m.eval().to(DEV)
                 nreg = int(getattr(m.config, 'num_register_tokens', 0) or 0)
                 print(f'  [DINO] HF {hf_repo} 로드됨 (res {RES_VIT} · register {nreg})')
                 def embed(paths, _m=m, _nreg=nreg):
