@@ -88,14 +88,18 @@ for i, v in enumerate(vids):
     w, h, dur, fps = probe(v)
     tag = f'v{i:02d}'
     d = f'{WORK}/{tag}'; os.makedirs(d, exist_ok=True)
-    t = STEP * 0.5; n = 0; frames = []
-    while t < dur and n < CAP:
-        op = f'{d}/{n:02d}_{t:05.1f}s.jpg'
-        subprocess.run(['ffmpeg', '-v', 'error', '-ss', f'{t:.2f}', '-i', v,
+    # 전 구간 균등 샘플(긴 영상의 화재를 앞 32초만 보고 놓치지 않도록)
+    if dur and dur > 1:
+        times = [dur * (k + 0.5) / CAP for k in range(CAP)]
+    else:
+        times = [STEP * (k + 0.5) for k in range(CAP)]
+    frames = []
+    for k, tt in enumerate(times):
+        op = f'{d}/{k:02d}_{tt:06.1f}s.jpg'
+        subprocess.run(['ffmpeg', '-v', 'error', '-ss', f'{tt:.2f}', '-i', v,
                         '-frames:v', '1', '-q:v', '3', op], check=False)
         if os.path.exists(op):
-            frames.append(op); n += 1
-        t += STEP
+            frames.append(op)
     montage_frames[i] = frames
     nhash = 0
     for f in frames:
