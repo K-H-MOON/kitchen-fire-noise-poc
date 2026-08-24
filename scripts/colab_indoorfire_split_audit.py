@@ -59,6 +59,9 @@ SEED       = int(os.environ.get('SEED', '0'))
 BASE_MODEL = os.environ.get('BASE_MODEL', 'v8_C0_s1')   # 합성-only 앵커
 SYN_COND   = os.environ.get('SYNTH_COND', 'C0')
 SYN_TRAIN  = f'{FIRE}/synth_{SYN_COND}/train'
+HARDNEG    = os.environ.get('HARDNEG', '0') == '1'      # 하드네거 주입(헛불 고치기) → 모델명 _hn
+HN_TRAIN   = os.environ.get('HARDNEG_TRAIN_DIR', f'{FIRE}/oilfire_hardneg_train/nofire')
+SUF        = '_hn' if HARDNEG else ''
 
 os.makedirs(OUT, exist_ok=True)
 if not os.path.isdir(RAW) or not os.listdir(RAW):
@@ -229,6 +232,18 @@ yaml = f"path: {NEW}\ntrain: train/images\nval: valid/images\ntest: test/images\
 open(f'{NEW}/data.yaml', 'w').write(yaml)
 print(f'fire-only 재분할본 -> {NEW}')
 
+# 하드네거 주입(opt-in): 빈 라벨 음성으로 그룹-train 에 추가. valid/test 는 불변(=fpr 회귀는 별도 셋).
+if HARDNEG:
+    hn = 0
+    for p in sorted(glob.glob(f'{HN_TRAIN}/*.jpg')):
+        name = 'hn_' + os.path.basename(p)
+        dst = f'{NEW}/train/images/{name}'
+        if not os.path.exists(dst):
+            os.symlink(os.path.realpath(p), dst)
+        open(f'{NEW}/train/labels/{os.path.splitext(name)[0]}.txt', 'w').close()   # 0바이트 = 음성
+        hn += 1
+    print(f'[HARDNEG] 하드네거 {hn}장 그룹-train 주입 (mixed 도 상속)')
+
 # ---------------------------------------------------------------------------
 # 재학습
 # ---------------------------------------------------------------------------
@@ -266,9 +281,9 @@ def build_mixed_grouped():
     return f'{MIX}/data.yaml'
 
 models = {'1_synth_only': f'{RUNS}/{BASE_MODEL}/best.pt',
-          '2_real_only': train('real_only_grouped', f'{NEW}/data.yaml')}
+          '2_real_only': train('real_only_grouped' + SUF, f'{NEW}/data.yaml')}
 if EVAL_MIXED:
-    models['3_mixed'] = train('mixed_grouped', build_mixed_grouped())
+    models['3_mixed'] = train('mixed_grouped' + SUF, build_mixed_grouped())
 
 # ---------------------------------------------------------------------------
 # 재측정 — 그룹 단위 test 에서 frame-level recall/precision/fpr
@@ -314,7 +329,9 @@ print('  → 크게 떨어지면 0.985 는 누수로 부풀었던 것.')
 json.dump({'ham_thresh': HAM_THRESH, 'epochs': EPOCHS, 'seed': SEED,
            'audit': audit,
            'resplit_counts': {sp: int((new_split == sp).sum()) for sp in ('train', 'valid', 'test')},
-           'n_fire_test': len(fire_imgs), 'n_nof_test': len(nof_imgs),
+           'n_fire_test': len(fire_imgs), 'n_nof_test': len(nof_imgs), 'hardneg': HARDNEG,
            'rows': rows, 'original_random_split_real_only_recall': 0.9847},
-          open(f'{OUT}/indoorfire_regroup.json', 'w'), ensure_ascii=False, indent=1, default=float)
-print(f'\n-> {OUT}/indoorfire_regroup.json · 모델 {PROJ}/real_only_grouped/weights/best.pt')
+          open(f'{OUT}/indoorfire_regroup{SUF}.json', 'w'), ensure_ascii=False, indent=1, default=float)
+print(f'\n-> {OUT}/indoorfire_regroup{SUF}.json · 모델 {PROJ}/real_only_grouped{SUF}/weights/best.pt')
+if HARDNEG:
+    print('  [HARDNEG] 여기 fpr 은 Indoor(헛불 원본 아님) 회귀용. 헛불 개선은 oilfire_hardneg_test 로 측정.')

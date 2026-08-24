@@ -33,9 +33,13 @@ CONF = 0.25
 drive.mount('/content/drive')
 os.makedirs(OUT, exist_ok=True)
 if not os.path.isdir(TEST) or not glob.glob(f'{TEST}/fire/*.jpg'):
-    os.makedirs(TEST, exist_ok=True)
-    print(f'{NAME} 압축 해제...')
-    zipfile.ZipFile(ZIP).extractall(TEST)
+    if os.path.exists(ZIP):
+        os.makedirs(TEST, exist_ok=True)
+        print(f'{NAME} 압축 해제...')
+        zipfile.ZipFile(ZIP).extractall(TEST)
+    else:
+        print(f'[주의] {ZIP} 없음 · {TEST} 도 준비 안 됨 '
+              f'(oilfire_hardneg_test 는 colab_hardneg_split.py 가 미리 만듦)')
 
 fire_imgs = sorted(glob.glob(f'{TEST}/fire/*.jpg'))
 nof_imgs  = sorted(glob.glob(f'{TEST}/nofire/*.jpg'))
@@ -48,9 +52,12 @@ def source(p):                      # 파일명 prefix = 장면(영상) 단위
 models = {
     '1_synth_only (v8_C0_s1)': f'{RUNS}/v8_C0_s1/best.pt',
     '2_real_only':             f'{IFRUN}/real_only/weights/best.pt',
+    '2h_real_only_hn':         f'{IFRUN}/real_only_hn/weights/best.pt',
     '3_mixed':                 f'{IFRUN}/mixed/weights/best.pt',
+    '3h_mixed_hn':             f'{IFRUN}/mixed_hn/weights/best.pt',
     '2g_real_only_grouped':    f'{IFRUN}/real_only_grouped/weights/best.pt',
-}
+    '2gh_real_only_grouped_hn': f'{IFRUN}/real_only_grouped_hn/weights/best.pt',
+}   # _hn = 하드네거 재학습(헛불 고치기). 미학습분은 [없음] 으로 건너뜀 → before/after 한 표에 비교.
 
 def detected(model, paths):
     """이미지별 검출여부(bool) 리스트."""

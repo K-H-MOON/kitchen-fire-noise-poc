@@ -34,6 +34,9 @@ SYN_COND = os.environ.get('SYNTH_COND', 'C0')
 SYN_TRAIN = f'{FIRE}/synth_{SYN_COND}/train'
 BASE_MODEL = os.environ.get('BASE_MODEL', 'v8_C0_s1')
 RUN = os.environ.get('RUN', 'both')       # both / realonly / mixed / evalonly
+HARDNEG = os.environ.get('HARDNEG', '0') == '1'   # 하드네거 주입(헛불 고치기) → 모델명 _hn
+HN_TRAIN = os.environ.get('HARDNEG_TRAIN_DIR', f'{FIRE}/oilfire_hardneg_train/nofire')
+SUF = '_hn' if HARDNEG else ''             # _hn 접미사(기존 baseline 안 덮음 · before/after 비교)
 
 drive.mount('/content/drive')
 os.makedirs(OUT, exist_ok=True)
@@ -89,7 +92,23 @@ def build_mixed():
     ni = len(glob.glob(f'{di}/*.jpg'))
     print(f'혼합 train 구성 완료 {ni}장 -> {MIX}')
 
+def inject_hardneg(imgs_dir, labels_dir):
+    """train-hardneg 프레임을 빈 라벨(0바이트=불 없음) 음성으로 train 에 주입."""
+    if not HARDNEG:
+        return 0
+    n = 0
+    for p in sorted(glob.glob(f'{HN_TRAIN}/*.jpg')):
+        name = 'hn_' + os.path.basename(p)
+        dst = f'{imgs_dir}/{name}'
+        if not os.path.exists(dst):
+            os.symlink(os.path.realpath(p), dst)
+        open(f'{labels_dir}/{os.path.splitext(name)[0]}.txt', 'w').close()   # 0바이트 = 음성
+        n += 1
+    print(f'[HARDNEG] 하드네거 {n}장 train 주입 -> {imgs_dir}')
+    return n
+
 build_fireonly()
+inject_hardneg(f'{IFD}/train/images', f'{IFD}/train/labels')   # real_only(및 mixed 가 IFD 상속)
 if RUN in ('both', 'mixed'):
     build_mixed()
 
@@ -104,14 +123,14 @@ def train(name, data_yaml):
 
 models = {'1_synth_only': f'{RUNS}/{BASE_MODEL}/best.pt'}
 if RUN in ('both', 'realonly'):
-    models['2_real_only'] = train('real_only', f'{IFD}/data.yaml')
+    models['2_real_only'] = train('real_only' + SUF, f'{IFD}/data.yaml')
 if RUN in ('both', 'mixed'):
-    models['3_mixed'] = train('mixed', f'{MIX}/data.yaml')
+    models['3_mixed'] = train('mixed' + SUF, f'{MIX}/data.yaml')
 if RUN == 'evalonly':                                               # 이미 학습된 것 평가만
-    if os.path.exists(f'{PROJ}/real_only/weights/best.pt'):
-        models['2_real_only'] = f'{PROJ}/real_only/weights/best.pt'
-    if os.path.exists(f'{PROJ}/mixed/weights/best.pt'):
-        models['3_mixed'] = f'{PROJ}/mixed/weights/best.pt'
+    if os.path.exists(f'{PROJ}/real_only{SUF}/weights/best.pt'):
+        models['2_real_only'] = f'{PROJ}/real_only{SUF}/weights/best.pt'
+    if os.path.exists(f'{PROJ}/mixed{SUF}/weights/best.pt'):
+        models['3_mixed'] = f'{PROJ}/mixed{SUF}/weights/best.pt'
 
 # ---------------------------------------------------------------------------
 # 평가 — 같은 Indoor test 에서 frame-level recall/precision/fpr
@@ -172,7 +191,7 @@ def show_curves(name):
 print('\n' + '=' * 66)
 print('학습 곡선 (train/val loss · best epoch)')
 print('=' * 66)
-for n in ('real_only', 'mixed'):
+for n in ('real_only' + SUF, 'mixed' + SUF):
     show_curves(n)
 
 print('\n' + '=' * 66)
@@ -186,7 +205,10 @@ for k in ['1_synth_only', '2_real_only', '3_mixed']:
 print('\n해석: 2·3 이 1보다 recall↑면 "실데이터가 놓침을 줄임" · 3 vs 2 로 합성 기여 확인.')
 print('경계: 일반 실내 화재(주방 아님) · Roboflow 분할 약한 누수 가능.')
 
-json.dump({'epochs': EPOCHS, 'synth_cond': SYN_COND, 'base': BASE_MODEL,
+json.dump({'epochs': EPOCHS, 'synth_cond': SYN_COND, 'base': BASE_MODEL, 'hardneg': HARDNEG,
            'n_fire_test': len(fire_imgs), 'n_nof_test': len(nof_imgs), 'rows': rows},
-          open(f'{OUT}/indoorfire_train.json', 'w'), ensure_ascii=False, indent=1, default=float)
-print(f'\n-> {OUT}/indoorfire_train.json · 모델 {PROJ}/(real_only|mixed)/weights/best.pt')
+          open(f'{OUT}/indoorfire_train{SUF}.json', 'w'), ensure_ascii=False, indent=1, default=float)
+print(f'\n-> {OUT}/indoorfire_train{SUF}.json · 모델 {PROJ}/(real_only{SUF}|mixed{SUF})/weights/best.pt')
+if HARDNEG:
+    print('  [HARDNEG] Indoor test 는 헛불 원본이 아님 → 여기 fpr 은 회귀 확인용(낮게 유지돼야).')
+    print('  실제 헛불 개선은 EVAL_SET=oilfire_hardneg_test 로 colab_oilfire_eval.py 에서 측정.')
