@@ -1,4 +1,5 @@
 > 📄 **미팅용 전체 요약 → [SUMMARY_meeting.md](docs/SUMMARY_meeting.md)** · **상세 서사·파이프라인 도식 → [DETAIL.md](docs/DETAIL.md)** · v3 결과·반론 → [MEETING_v3_probe.md](docs/MEETING_v3_probe.md)
+> 🔬 **미팅 이후 과정 요약 → [AFTER_meeting.md](docs/AFTER_meeting.md)** (실제 데이터 방향·진행 중)
 
 # 🔄 프로젝트 방향 전환 제안 (2026-08-20)
 
