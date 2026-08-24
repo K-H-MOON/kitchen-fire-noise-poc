@@ -1,13 +1,15 @@
 # HANDOFF — 다음 세션 이어가기 (2026-08-24 갱신)
 
-> **v1·v2·v3 모두 실제 전이 약함(불꽃·표현 레버 아님) → 병목 = 데이터/도메인.** 회의 후 = **실제 데이터로 공략** → **실험 A 완료: 실데이터 학습이 놓침을 없앰 확인**(같은 Indoor test recall **0.235→0.985**). 단 같은 도메인·프레임분할 누수라 절대값 낙관적; 견고한 건 방향(§AFTER_meeting §5).
-> 완료: v2 A/B(음성)·v2 precision/recall·v3 DINOv3 프로브(음성 근접)·realfire 오염 발견·Indoor 깨끗한 첫 측정(recall 0.20)·**실험 A(합성 0.235 / 실 0.985 / 혼합 0.985)**·미팅 문서 일습.
+> **v1·v2·v3 모두 실제 전이 약함(불꽃·표현 레버 아님) → 병목 = 데이터/도메인.** 회의 후 = **실제 데이터로 공략** → **실험 A: 실데이터 학습이 놓침 해소**(Indoor test recall 0.235→0.985). **누수 통제 재측정(그룹분할) 0.899로 견고**(누수 ~8.6점뿐, 방법론 sanity 통과: 합성 0.235→0.237 불변). **누수는 해소된 이슈 · 남은 경계=도메인**(0.899도 일반 Indoor, 급식실/유류 별개). §AFTER_meeting §5.
+> 완료: v2 A/B(음성)·v3 DINOv3 프로브(음성)·realfire 오염 발견·Indoor 첫 측정(0.20)·**실험 A(랜덤 합성0.235/실0.985/혼합0.985)**·**누수 통제 재측정(그룹 합성0.237/실0.899)**·미팅 문서.
 
-## ▶ 새 세션 첫 작업 (2026-08-24 실험 A 완료 후)
-1. ~~실험 A 학습 결과 받기~~ ✅ · ~~결과 표 채우기~~ ✅(AFTER_meeting §5·아래 §실험 A) · ~~판정~~ ✅(② ≫ ①: 놓침 병목 실데이터로 해소 · ③≈②: 합성 무기여).
-2. **판정의 절대값 검증 (핵심 다음)**: 0.985는 같은 도메인+프레임분할 누수로 부풀었을 가능성 큼. → **(a) 씬/영상 단위 분할로 재측정**(누수 통제) · **(b) 도메인 이동 평가** = real_only/mixed best.pt를 **급식실 근접 realfire(정리분)**·유류화재에 돌려 전이 확인.
-3. **다음 후보**: ① 급식실 근접 검증(정리한 realfire, 위 2b) ② New_sample(야외·JSON) 변환해 실데이터 확대 ③ (합성 큰 불꽃 추가는 실험 A가 "합성 무기여"를 보였으니 **우선순위 낮음**).
-4. 모델: `runs_if/real_only/weights/best.pt`·`runs_if/mixed/weights/best.pt`(Drive) · 결과 `indoorfire_eval/indoorfire_train.json` · **RUN='evalonly'로 재학습 없이 재측정 가능**.
+## ▶ 새 세션 첫 작업 (2026-08-24 누수 검증까지 완료 후)
+1. ~~실험 A~~ ✅ · ~~판정~~ ✅(②≫①·③≈②) · ~~누수 통제 재측정~~ ✅(그룹분할 real 0.899 — 누수 ~8.6점, 결론 견고).
+2. **핵심 다음 = 도메인 이동 평가**(누수는 끝난 이슈): real_only/mixed best.pt를 **깨끗한 유류화재(소방 시연 재큐레이션)**·급식실 근접에 돌려 전이 확인. 소방 시연(냄비 과조리 화재)=현 realfire의 튀김유 편(오염만 제거하면 목표 근접 proxy). ⚠️ 소량이라 test 전용·씬단위 CI.
+   - 선행: realfire 재큐레이션(편집·오라벨 제외) = DATA_collection_spec §9. 스크립트 미작성.
+3. **그 후 A안(전이학습)**: 일반 화재(Indoor) 사전학습 → 소량 급식실/유류 fine-tune. test=목표 도메인·씬분리·불가침(소량이면 LOSO CV). 근거=이 세션 대화.
+4. **후순위**: New_sample(야외 JSON) 변환 · (합성 추가는 "무기여"라 낮음).
+5. 모델: `runs_if/{real_only,mixed,real_only_grouped}/weights/best.pt`(Drive) · 결과 `indoorfire_eval/{indoorfire_train,indoorfire_regroup,indoorfire_split_audit}.json` · 재측정 스크립트 `colab_indoorfire_split_audit.py`(RUN=audit/both) · `colab_indoorfire_train.py`(RUN='evalonly').
 - 문서 지도: 미팅 이후 전체 = `docs/AFTER_meeting.md` · 수집사양/놓침진단 = `docs/DATA_collection_spec.md` · 미팅용(v1~v3) = `docs/SUMMARY_meeting.md`.
 
 ## ⚠️ 중대 발견 — realfire 평가셋 오염 (2026-08-24)
@@ -42,8 +44,19 @@ error-analysis(`colab_realfire_erroranalysis.py`) 영상별 시트 육안 결과
   | ③ 혼합 | **0.985** | 0.980 | 0.022 | 386/392 |
 
   - **판정**: ② ≫ ① → **놓침(recall) 병목은 실데이터로 해소**(0.235→0.985, 놓침 300→6). ③≈② (혼합이 precision·fpr 미세하게 나쁨) → **합성 무기여**(v1~v3 정합).
-  - **⚠️ 절대값 경계**: 같은 도메인 test + 프레임 랜덤분할 누수 → 0.985 부풀었을 가능성 큼. **방향만 견고.** 다음 = 씬/영상 분할 재측정 · 급식실 근접 도메인이동 평가(§새 세션 첫 작업 2).
   - json `indoorfire_eval/indoorfire_train.json` · 모델 `runs_if/(real_only|mixed)/weights/best.pt`.
+
+- **누수 통제 재측정 (그룹 분할, `colab_indoorfire_split_audit.py`)**:
+  - 누수 감사: **test fire 73%(286/392)가 train에 근접중복**(dHash≤6) → 랜덤분할 누수 심각.
+  - 그룹 분할(클러스터 split 경계 안 넘게, test 근접중복 0) 재측정:
+
+    | 조건 | recall | precision | fpr | 검출(fire) |
+    |---|---:|---:|---:|---:|
+    | ① 합성-only | 0.237 | 0.842 | 0.041 | 85/358 |
+    | ② 실-only | **0.899** | 0.979 | 0.018 | 322/358 |
+
+  - **판정**: 실 0.985→**0.899**(누수 ~8.6점) 하지만 견고 · 합성 0.235→0.237 **불변**(Indoor 미학습 → 분할 무영향 = sanity 통과). → **결론(실데이터가 놓침 해소)은 누수 제거해도 유지. 누수는 끝난 이슈, 남은 경계=도메인.**
+  - json `indoorfire_eval/indoorfire_regroup.json`·`indoorfire_split_audit.json` · 모델 `runs_if/real_only_grouped/weights/best.pt`.
 
 ## 회의 후 신규 방향 메모 (2026-08-24)
 
