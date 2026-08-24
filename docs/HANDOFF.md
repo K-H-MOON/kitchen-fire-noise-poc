@@ -1,15 +1,15 @@
 # HANDOFF — 다음 세션 이어가기 (2026-08-24 갱신)
 
-> **v1·v2·v3 모두 실제 전이 약함(불꽃·표현 레버 아님) → 병목 = 데이터/도메인.** 회의 후 = **실제 데이터로 공략** → **실험 A: 실데이터 학습이 놓침 해소**(Indoor test recall 0.235→0.985). **누수 통제 재측정(그룹분할) 0.899로 견고**(누수 ~8.6점뿐, 방법론 sanity 통과: 합성 0.235→0.237 불변). **누수는 해소된 이슈 · 남은 경계=도메인**(0.899도 일반 Indoor, 급식실/유류 별개). §AFTER_meeting §5.
-> 완료: v2 A/B(음성)·v3 DINOv3 프로브(음성)·realfire 오염 발견·Indoor 첫 측정(0.20)·**실험 A(랜덤 합성0.235/실0.985/혼합0.985)**·**누수 통제 재측정(그룹 합성0.237/실0.899)**·미팅 문서.
+> **v1·v2·v3 모두 실제 전이 약함(불꽃·표현 레버 아님) → 병목 = 데이터/도메인.** 회의 후 = **실제 데이터로 공략** → **실험 A: 실데이터 학습이 놓침 해소**(Indoor recall 0.235→0.985). **누수 통제 0.899로 견고**(누수 ~8.6점). **도메인 이동 파일럿: 진짜 기름불 test 실 0.985 vs 합성 0.523 → 실데이터가 목표 도메인(기름불)에도 전이**(누수 원천 불가 독립 test). §AFTER_meeting §5·§6.
+> 완료: realfire 오염 발견·Indoor 첫 측정(0.20)·**실험 A(랜덤 합성0.235/실0.985)**·**누수 통제(그룹 합성0.237/실0.899)**·**도메인 이동 파일럿(기름불: 합성0.523/실0.985, 장면N=4)**·미팅 문서.
 
-## ▶ 새 세션 첫 작업 (2026-08-24 누수 검증까지 완료 후)
-1. ~~실험 A~~ ✅ · ~~판정~~ ✅(②≫①·③≈②) · ~~누수 통제 재측정~~ ✅(그룹분할 real 0.899 — 누수 ~8.6점, 결론 견고).
-2. **핵심 다음 = 도메인 이동 평가**(누수는 끝난 이슈): real_only/mixed best.pt를 **깨끗한 유류화재(소방 시연 재큐레이션)**·급식실 근접에 돌려 전이 확인. 소방 시연(냄비 과조리 화재)=현 realfire의 튀김유 편(오염만 제거하면 목표 근접 proxy). ⚠️ 소량이라 test 전용·씬단위 CI.
-   - 선행: realfire 재큐레이션(편집·오라벨 제외) = DATA_collection_spec §9. 스크립트 미작성.
-3. **그 후 A안(전이학습)**: 일반 화재(Indoor) 사전학습 → 소량 급식실/유류 fine-tune. test=목표 도메인·씬분리·불가침(소량이면 LOSO CV). 근거=이 세션 대화.
+## ▶ 새 세션 첫 작업 (2026-08-24 도메인 이동 파일럿까지 완료 후)
+1. ~~실험 A~~ ✅ · ~~누수 통제 재측정~~ ✅(그룹 real 0.899) · ~~도메인 이동 파일럿~~ ✅(기름불 real 0.985 vs 합성 0.523, 누수 원천불가 독립 test).
+2. **핵심 다음 = 파일럿 확대로 확정**: 지금 파일럿은 **장면 N=4·큰불 위주·음성 2장면**이라 방향성만. → ① **초기·작은 불** test 추가(조기경보 핵심, 현재 미검증) ② 다양한 **하드네거티브**(김·수증기 등 정상 급식실) ③ 장면 수↑(추가 시연영상 수동선별·v7 수동 큐레이션·통제 촬영).
+3. **그 후 A안(전이학습)**: 일반 화재(Indoor) 사전학습 → 소량 급식실/유류 fine-tune. test=목표 도메인·씬분리·불가침(소량이면 LOSO CV).
 4. **후순위**: New_sample(야외 JSON) 변환 · (합성 추가는 "무기여"라 낮음).
-5. 모델: `runs_if/{real_only,mixed,real_only_grouped}/weights/best.pt`(Drive) · 결과 `indoorfire_eval/{indoorfire_train,indoorfire_regroup,indoorfire_split_audit}.json` · 재측정 스크립트 `colab_indoorfire_split_audit.py`(RUN=audit/both) · `colab_indoorfire_train.py`(RUN='evalonly').
+5. 모델: `runs_if/{real_only,mixed,real_only_grouped}/weights/best.pt` · 결과 `indoorfire_eval/{indoorfire_train,indoorfire_regroup,indoorfire_split_audit,oilfire_pilot_eval}.json` · 스크립트 `colab_indoorfire_split_audit.py`·`colab_oilfire_eval.py`·`colab_inspect_newdata.py`. **기름불 test = `oilfire_pilot.zip`(Drive 루트, 로컬 scratchpad에도 원본 프레임).**
+   - 데이터 수집 함정: **YouTube는 Colab(데이터센터 IP) 봇 차단** → 로컬 PC(주거IP)에서 yt-dlp 받고 ffmpeg로 프레임 추출·검증 후 zip 업로드. Drive 커넥터는 **blessmoonkh** 계정(seochorobotics 루트 새 파일 검색 안 됨, fire_frames는 공유돼 열림).
 - 문서 지도: 미팅 이후 전체 = `docs/AFTER_meeting.md` · 수집사양/놓침진단 = `docs/DATA_collection_spec.md` · 미팅용(v1~v3) = `docs/SUMMARY_meeting.md`.
 
 ## ⚠️ 중대 발견 — realfire 평가셋 오염 (2026-08-24)
