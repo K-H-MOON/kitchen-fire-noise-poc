@@ -34,7 +34,7 @@ SRC  = f'{FIRE}/oilfire_hardneg/nofire'      # colab_build_hardneg.py 산출(하
 SANI = f'{FIRE}/oilfire_hardneg/fire'        # sanity 화염(파일럿)
 TR   = f'{FIRE}/oilfire_hardneg_train'
 TE   = f'{FIRE}/oilfire_hardneg_test'
-HELDOUT = [t for t in os.environ.get('HELDOUT', '13476222,8094275,945875270,267').split(',') if t]
+HELDOUT = [t for t in os.environ.get('HELDOUT', '13476222,8094275,94587527,267').split(',') if t]
 
 
 def scene(p):                                # 장면 = 파일명에서 시간접미사(_NNN.Ns) 앞 부분
