@@ -1,30 +1,19 @@
 # HANDOFF — 다음 세션 이어가기 (2026-08-24 갱신)
 
 > **v1·v2·v3 모두 실제 전이 약함(불꽃·표현 레버 아님) → 병목 = 데이터/도메인.** 회의 후 = **실제 데이터로 공략** → **실험 A: 실데이터 학습이 놓침 해소**(Indoor recall 0.235→0.985). **누수 통제 0.899로 견고**(누수 ~8.6점). **도메인 이동 파일럿: 유류화재 test 큰불(§C) 실 0.985·초기작은불(§D) 실 0.97~1.0 vs 합성 0.52·0.27 → 실데이터가 유류화재 큰불·초기불 모두에 전이**(누수 원천 불가 독립 test). §AFTER_meeting §5·§6.
-> 완료: realfire 오염·Indoor 첫측정(0.20)·**실험 A(랜덤 합성0.235/실0.985)**·**누수 통제(그룹 합성0.237/실0.899)**·**도메인 이동(§C 큰불 합성0.523/실0.985 · §D 초기작은불 합성0.267/실1.000)**·**§E 헛불(하드네거130장: 실 fpr0.223/혼합0.238/그룹0.085/합성0.092)**·미팅 문서.
+> **★2026-08-24 §F 헛불 고치기(하드네거 재학습) 완료 = 사실상 무효. 주황조명(13476222)이 모든 실모델에서 fpr 0.875~1.0로 요지부동 = "주황조명 FP는 데이터 문제" 확정(1장면뿐 유형은 일반화 못 함, 실증). 스팀은 이미 그룹모델이 해결. 다음 진짜 레버 = 주황 하드네거 장면 다수 수집. 상세 §F.**
+> 완료: realfire 오염·Indoor 첫측정(0.20)·**실험 A(랜덤 합성0.235/실0.985)**·**누수 통제(그룹 합성0.237/실0.899)**·**도메인 이동(§C 큰불 합성0.523/실0.985 · §D 초기작은불 합성0.267/실1.000)**·**§E 헛불(하드네거130장: 실 fpr0.223/혼합0.238/그룹0.085/합성0.092)**·**§F 헛불 고치기(hardneg 재학습: grouped_hn held-out fpr 0.209→0.186·주황 0.875불변·recall유지)**·미팅 문서.
 
-## ▶ 새 세션 첫 작업 (2026-08-24 하드네거티브 헛불 검증까지 완료 후)
-1. ~~실험 A~~✅ · ~~누수통제~~✅(그룹0.899) · ~~§C큰불~~✅(실0.985) · ~~§D초기작은불~~✅(실0.97~1.0) · ~~§E 헛불 검증~~✅.
-   - **§E 발견: 실/혼합 모델이 주황조명·어두운스팀에 헛불(fpr~0.22). 누수통제 그룹이 최선(0.085·recall유지).** 순수 스팀엔 안 속음. 합성 낮은 fpr은 recall 낮아서 착시.
-2. **핵심 다음 = 헛불 고치기(값쌈, 데이터 있음)**: 헛불 낸 하드네거티브(주황조명 13476222·13578888·어두운스팀 8094275 등, oilfire_hardneg/nofire)를 **학습에 추가**해 real_only/mixed 재학습 → fpr 낮추기(급식실 화재 데이터 불요). ② 진짜 초기(아지랑이·연기만)·급식실 시점은 여전히 미검증.
+## ▶ 새 세션 첫 작업 (2026-08-24 §F 헛불 고치기까지 완료 후)
+1. ~~실험 A~~✅ · ~~누수통제~~✅(그룹0.899) · ~~§C큰불~~✅ · ~~§D초기작은불~~✅ · ~~§E 헛불 검증~~✅ · ~~§F 헛불 고치기(hardneg 재학습)~~✅.
+2. **§F 결론 = 헛불 고치기(hardneg 재학습)는 사실상 무효.** 배포후보 grouped_hn: held-out fpr 0.209→0.186(개선폭 1프레임·노이즈)·목표recall 유지(pilot0.985·early1.000)·Indoor recall만 0.899→0.821 하락(유류엔 전이 안 됨). **주황(13476222) 0.875 요지부동** = 모든 실모델 공통 → **"주황조명 FP=데이터 문제" 확정.** 상세 §F.
+3. **핵심 다음 = 주황조명 헛불 진단 → 데이터 수집.**
+   - **① 진단(먼저·값쌈)**: `13476222` held-out 8프레임에 **모델 예측박스 얹은 몽타주**로 "왜 뜨나" 육안 — 진짜 주황불꽃 유사인가 vs 단지 주황 조명인가. (스크립트 미작성 — `colab_oilfire_eval.py`의 detected() 재사용해 박스 렌더 몽타주 새로 짜면 됨. `oilfire_hardneg_test/nofire/13476222_*.jpg` 8장, 모델 `runs_if/real_only_grouped_hn`.)
+   - **② 데이터**: 단지 주황조명이면 → **주황 조리 하드네거 장면 다수 수집**(현재 train에 주황 1장면·5프레임뿐이라 일반화 실패). 로컬 PC로 유튜브 조리영상(주황 조명·나트륨등·석양 주방) yt-dlp→프레임→검증→zip. 진짜 불꽃 유사면 → 애매 케이스로 별도.
+   - ③ 이후 A안(전이학습): Indoor 사전학습 → 소량 급식실/유류 fine-tune(아래 원래 3번).
 
-   **▶▶ 즉시 첫 액션 (헛불 고치기 절차) — 스크립트 준비 완료(2026-08-24 세션), Colab 실행만 남음:**
-   - **확정된 split (사용자 결정)**: held-out(4장면) = `13476222`(주황조명 test)·`8094275`(어두운 스팀)·`94587527`(istockphoto)·`267`, 나머지 12장면 train.
-     설계 = **주황조명 일반화 증명: 13578888(train) → 13476222(test)**. 경계=유형당 장면 적어 held-out이 모든 헛불 모드 대표 못 할 수 있음(1장면뿐 유형; 해석 시 명시).
-   - **Colab 실행 순서** (seochorobotics · 매 런타임 clone):
-     ```python
-     %run scripts/colab_hardneg_split.py                        # ① 장면 split → oilfire_hardneg_{train,test} + manifest
-     import os; os.environ['HARDNEG']='1'
-     %run scripts/colab_indoorfire_train.py                     # ② real_only_hn · mixed_hn (랜덤분할 · fpr0.223 worst-case)
-     %run scripts/colab_indoorfire_split_audit.py               # ③ real_only_grouped_hn (그룹분할 · 배포후보 · fpr0.085)
-     for s in ('oilfire_hardneg_test','oilfire_pilot','oilfire_early'):
-         os.environ['EVAL_SET']=s; %run scripts/colab_oilfire_eval.py   # ④ hardneg_test=fpr(핵심)·pilot/early=recall 회귀
-     ```
-     ⚠ `colab_hardneg_split.py`는 held-out 토큰이 정확히 1장면과 매칭 안 되면 중단(장면목록 출력) → 토큰 `HELDOUT` env로 교정.
-   - **판정**: `_hn` 모델의 held-out(oilfire_hardneg_test) **fpr↓** (특히 13476222 주황조명 scene_fpr↓ = 일반화) + oilfire_pilot/early **recall 유지**(회귀 없음). 둘 다 좋으면 성공.
-   - 기대: real_only fpr 0.223 → 하향(그룹 0.085 근처?), recall 0.9+ 유지. 안 되면 하드네거 비율·에폭 조정.
-   - 산출: 모델 `runs_if/{real_only_hn,mixed_hn,real_only_grouped_hn}/weights/best.pt` · json `indoorfire_eval/{indoorfire_train_hn,indoorfire_regroup_hn,oilfire_hardneg_test_eval,oilfire_pilot_eval,oilfire_early_eval}.json` · manifest `hardneg_split.json`.
-3. **그 후 A안(전이학습)**: 일반 화재(Indoor) 사전학습 → 소량 급식실/유류 fine-tune. test=목표 도메인·씬분리·불가침(소량이면 LOSO CV).
+   **오버피팅/도메인갭 정리(사용자 질문 답)**: ⓐ 에폭 과적합=없음(val 평탄·best.pt·grouped_hn은 ep59 조기종료 ep44 선택). ⓑ 랜덤분할 val mAP0.53 vs 그룹0.40 격차=**누수 인플레이션**(test 73% train근접중복)이지 과적합 아님 → 그룹수치가 정직. ⓒ **진짜 병목=도메인 갭**(정직한 그룹모델도 못 본 유류-도메인 주황엔 헛불 = 데이터로만 고침). 상세는 이 세션 대화.
+4. **~~그 후 A안(전이학습)~~ (위 3-③로 이동)**: 일반 화재(Indoor) 사전학습 → 소량 급식실/유류 fine-tune. test=목표 도메인·씬분리·불가침(소량이면 LOSO CV).
 4. **후순위**: New_sample(야외 JSON) 변환 · (합성 추가는 "무기여"라 낮음).
 5. 모델: `runs_if/{real_only,mixed,real_only_grouped}/weights/best.pt` · 결과 `indoorfire_eval/{indoorfire_train,indoorfire_regroup,indoorfire_split_audit,oilfire_pilot_eval,oilfire_early_eval,oilfire_hardneg_eval}.json` · 스크립트 `colab_hardneg_split.py`(하드네거 장면 split·2026-08-24 신규)·`colab_indoorfire_train.py`/`colab_indoorfire_split_audit.py`(둘 다 `HARDNEG=1` env로 하드네거 주입→`_hn` 모델)·`colab_oilfire_eval.py`(EVAL_SET·소스별 fpr·`_hn` 모델 포함)·`colab_build_hardneg.py`(루트 조리영상→하드네거)·`colab_inspect_newdata.py`(INSPECT_ALL). **test: `oilfire_pilot.zip`(큰불65/14)·`oilfire_early.zip`(초기불30/10)·하드네거 = Drive 루트 조리영상16개→build로 `fire_frames/oilfire_hardneg`(nofire130/sanity10). 로컬 scratchpad에 원본·큐레이션.**
    - 데이터 수집 함정: **YouTube는 Colab(데이터센터 IP) 봇 차단** → 로컬 PC(주거IP)에서 yt-dlp 받고 ffmpeg로 프레임 추출·검증 후 zip 업로드. Drive 커넥터는 **blessmoonkh** 계정(seochorobotics 루트 새 파일 검색 안 됨, fire_frames는 공유돼 열림).
@@ -75,6 +64,27 @@ error-analysis(`colab_realfire_erroranalysis.py`) 영상별 시트 육안 결과
 
   - **판정**: 실 0.985→**0.899**(누수 ~8.6점) 하지만 견고 · 합성 0.235→0.237 **불변**(Indoor 미학습 → 분할 무영향 = sanity 통과). → **결론(실데이터가 놓침 해소)은 누수 제거해도 유지. 누수는 끝난 이슈, 남은 경계=도메인.**
   - json `indoorfire_eval/indoorfire_regroup.json`·`indoorfire_split_audit.json` · 모델 `runs_if/real_only_grouped/weights/best.pt`.
+
+### §F 헛불 고치기 — 하드네거 재학습 (완료, 2026-08-24)
+- **질문**: §E 헛불(주황조명·스팀)을 하드네거를 학습에 넣어 고칠 수 있나. **급식실 화재 데이터 불요·값쌈**이라 첫 시도.
+- **설계**: 하드네거 130장(16장면)을 **장면 단위** train12/held-out4 분리(프레임 누수 0). held-out = `13476222`(주황)·`8094275`(스팀)·`94587527`·`267`. **주황 일반화 증명 = 13578888(train·5프레임)→13476222(test).** train-hardneg 87장을 빈 라벨(음성)로 주입해 `real_only_hn`(랜덤)·`real_only_grouped_hn`(그룹·배포후보) 재학습(`HARDNEG=1`). 스크립트 `colab_hardneg_split.py`+`colab_indoorfire_train.py`/`_split_audit.py`+`colab_oilfire_eval.py`.
+- **결과 (held-out fpr, 43장·4장면·frame-level)**:
+
+  | 장면(프레임) | ①synth | ②real | ②h real_hn | ②g grouped | ②gh grouped_hn |
+  |---|---:|---:|---:|---:|---:|
+  | 13476222 주황(8) | 0.000 | 0.875 | **1.000** | 0.875 | **0.875** |
+  | 8094275 스팀(12) | 0.000 | 0.667 | 0.000 | 0.000 | 0.000 |
+  | 94587527 (11) | 0.000 | 0.273 | 0.545 | 0.182 | 0.091 |
+  | 267 (12) | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+  | **전체(43)** | 0.000 | 0.419 | 0.326 | 0.209 | **0.186** |
+  | recall pilot | 0.523 | 0.985 | 0.985 | 0.985 | 0.985 |
+  | recall early | 0.267 | 1.000 | 0.967 | 0.967 | 1.000 |
+  | Indoor(그룹)recall | — | — | — | 0.899 | 0.821 |
+
+  - **판정 = 사실상 무효.** 전체 fpr 미세개선(그룹 0.209→0.186)은 전부 94587527 1프레임(2/11→1/11)=노이즈. **주황(13476222)은 모든 실모델에서 0.875~1.0 요지부동** — 13578888(주황 1장면) 학습이 다른 주황 장면에 전이 안 됨. 스팀(8094275)은 그룹모델이 이미 0(hardneg 불요). recall은 목표도메인(pilot/early) 유지·early는 오히려↑. grouped_hn은 Indoor recall만 0.899→0.821 하락(유류엔 전이 안 됨, 무시가능).
+  - **결론: "주황조명 FP=데이터 문제" 확정**(1장면뿐 유형은 일반화 못 함, 우리가 사전 경고한 한계의 실증). hardneg 재학습은 다양성 있는 유형(스팀)엔 통하나 주황엔 무력. **다음 레버=주황 하드네거 장면 다수 수집**(§ 새 세션 첫 작업 3번).
+  - **오버피팅 아님(사용자 질문)**: real_only_hn val ep58 best·평탄, grouped_hn **ep59 조기종료→ep44 best**(patience 작동). 랜덤val 0.53 vs 그룹val 0.40 격차=누수 인플레이션(test 73% train근접중복)이지 과적합 아님. 진짜 병목=도메인 갭.
+  - json `indoorfire_eval/{indoorfire_train_hn,indoorfire_regroup_hn,oilfire_hardneg_test_eval,oilfire_pilot_eval,oilfire_early_eval}.json` · 모델 `runs_if/{real_only_hn,real_only_grouped_hn}/weights/best.pt` · manifest `hardneg_split.json`. (mixed_hn·synth_hn 미학습.)
 
 ## 회의 후 신규 방향 메모 (2026-08-24)
 
