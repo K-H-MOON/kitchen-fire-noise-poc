@@ -34,7 +34,7 @@ drive.mount('/content/drive')
 os.makedirs(OUT, exist_ok=True)
 if not os.path.isdir(TEST) or not glob.glob(f'{TEST}/fire/*.jpg'):
     os.makedirs(TEST, exist_ok=True)
-    print('oilfire_pilot 압축 해제...')
+    print(f'{NAME} 압축 해제...')
     zipfile.ZipFile(ZIP).extractall(TEST)
 
 fire_imgs = sorted(glob.glob(f'{TEST}/fire/*.jpg'))
