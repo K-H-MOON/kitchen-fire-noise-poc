@@ -182,11 +182,12 @@ def show_curves(name):
     bi = max(range(len(rows)), key=lambda i: (g(rows[i], K) or -1))
     print(f'[{name}] 실행 epoch {len(rows)} · 최종 train_loss {tl:.3f} · val_loss {vl:.3f} '
           f'· best epoch {int(g(rows[bi], "epoch"))} (mAP50-95 {g(rows[bi], K):.3f})')
-    try:
-        from IPython.display import Image as _I, display as _d
-        _d(_I(p))
-    except Exception:
-        print(f'  곡선 그림: {p}')
+    if os.path.exists(p):                    # plots=False 면 results.png 없음(수치는 위 줄에 있음)
+        try:
+            from IPython.display import Image as _I, display as _d
+            _d(_I(p))
+        except Exception:
+            print(f'  곡선 그림: {p}')
 
 print('\n' + '=' * 66)
 print('학습 곡선 (train/val loss · best epoch)')
