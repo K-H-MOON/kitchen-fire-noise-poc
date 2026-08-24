@@ -142,6 +142,39 @@ for key, best in models.items():
     fpr = nd / len(nof_imgs) if nof_imgs else 0
     rows[key] = dict(recall=rec, precision=prec, fpr=fpr, fire_det=fd, nof_det=nd)
 
+# ---------------------------------------------------------------------------
+# 학습 곡선 — epoch별 train/val loss (results.csv/png). "에폭마다 loss 측정" 충족.
+# ---------------------------------------------------------------------------
+def show_curves(name):
+    import csv as _csv
+    d = f'{PROJ}/{name}'; c = f'{d}/results.csv'; p = f'{d}/results.png'
+    if not os.path.exists(c):
+        return
+    rows = [{k.strip(): v for k, v in r.items()} for r in _csv.DictReader(open(c))]
+    def g(r, k):
+        try:
+            return float(r[k])
+        except Exception:
+            return None
+    last = rows[-1]
+    tl = sum(x for x in [g(last, 'train/box_loss'), g(last, 'train/cls_loss'), g(last, 'train/dfl_loss')] if x)
+    vl = sum(x for x in [g(last, 'val/box_loss'), g(last, 'val/cls_loss'), g(last, 'val/dfl_loss')] if x)
+    K = 'metrics/mAP50-95(B)'
+    bi = max(range(len(rows)), key=lambda i: (g(rows[i], K) or -1))
+    print(f'[{name}] 실행 epoch {len(rows)} · 최종 train_loss {tl:.3f} · val_loss {vl:.3f} '
+          f'· best epoch {int(g(rows[bi], "epoch"))} (mAP50-95 {g(rows[bi], K):.3f})')
+    try:
+        from IPython.display import Image as _I, display as _d
+        _d(_I(p))
+    except Exception:
+        print(f'  곡선 그림: {p}')
+
+print('\n' + '=' * 66)
+print('학습 곡선 (train/val loss · best epoch)')
+print('=' * 66)
+for n in ('real_only', 'mixed'):
+    show_curves(n)
+
 print('\n' + '=' * 66)
 print('실험 A — 같은 Indoor test(fire 392) · frame-level')
 print('=' * 66)
