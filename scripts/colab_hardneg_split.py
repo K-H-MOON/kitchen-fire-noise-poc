@@ -77,7 +77,7 @@ def stage(dst_root, scene_list, sub='nofire'):
     n = 0
     for s in scene_list:
         for p in scenes[s]:
-            os.symlink(os.path.realpath(p), f'{d}/{os.path.basename(p)}')
+            shutil.copy(p, f'{d}/{os.path.basename(p)}')   # Drive(FUSE)는 symlink 미지원 → 복사
             n += 1
     return n
 
@@ -92,7 +92,7 @@ if os.path.isdir(df):
 os.makedirs(df, exist_ok=True)
 sf = sorted(glob.glob(f'{SANI}/*.jpg'))
 for p in sf:
-    os.symlink(os.path.realpath(p), f'{df}/{os.path.basename(p)}')
+    shutil.copy(p, f'{df}/{os.path.basename(p)}')   # Drive(FUSE) symlink 미지원 → 복사
 
 print(f'\ntrain-hardneg   {ntr}장 -> {TR}/nofire')
 print(f'held-out-hardneg {nte}장 -> {TE}/nofire · sanity fire {len(sf)}장 -> {TE}/fire')
