@@ -1,14 +1,15 @@
 # HANDOFF — 다음 세션 이어가기 (2026-08-24 갱신)
 
 > **v1·v2·v3 모두 실제 전이 약함(불꽃·표현 레버 아님) → 병목 = 데이터/도메인.** 회의 후 = **실제 데이터로 공략** → **실험 A: 실데이터 학습이 놓침 해소**(Indoor recall 0.235→0.985). **누수 통제 0.899로 견고**(누수 ~8.6점). **도메인 이동 파일럿: 유류화재 test 큰불(§C) 실 0.985·초기작은불(§D) 실 0.97~1.0 vs 합성 0.52·0.27 → 실데이터가 유류화재 큰불·초기불 모두에 전이**(누수 원천 불가 독립 test). §AFTER_meeting §5·§6.
-> 완료: realfire 오염 발견·Indoor 첫 측정(0.20)·**실험 A(랜덤 합성0.235/실0.985)**·**누수 통제(그룹 합성0.237/실0.899)**·**도메인 이동(§C 큰불 합성0.523/실0.985 · §D 초기작은불 합성0.267/실1.000, 장면N=4)**·미팅 문서.
+> 완료: realfire 오염·Indoor 첫측정(0.20)·**실험 A(랜덤 합성0.235/실0.985)**·**누수 통제(그룹 합성0.237/실0.899)**·**도메인 이동(§C 큰불 합성0.523/실0.985 · §D 초기작은불 합성0.267/실1.000)**·**§E 헛불(하드네거130장: 실 fpr0.223/혼합0.238/그룹0.085/합성0.092)**·미팅 문서.
 
-## ▶ 새 세션 첫 작업 (2026-08-24 초기·작은 불 test까지 완료 후)
-1. ~~실험 A~~ ✅ · ~~누수 통제~~ ✅(그룹 0.899) · ~~도메인 이동 §C 큰불~~ ✅(실 0.985) · ~~§D 초기·작은 불~~ ✅(실 0.97~1.0, 합성 0.27).
-2. **핵심 다음 = 남은 사각 확대로 확정**: ① **진짜 초기(첫 1~2초·아지랑이·연기만)** — 지금 §D "작은 불"은 뚜렷한 소형화염이라 그보다 이른 단계 미검증 ② 다양한 **하드네거티브**(김·수증기 등 정상 급식실, 값쌈) ③ **급식실 시점·통제 촬영**(장면 N↑, v7 수동 큐레이션).
+## ▶ 새 세션 첫 작업 (2026-08-24 하드네거티브 헛불 검증까지 완료 후)
+1. ~~실험 A~~✅ · ~~누수통제~~✅(그룹0.899) · ~~§C큰불~~✅(실0.985) · ~~§D초기작은불~~✅(실0.97~1.0) · ~~§E 헛불 검증~~✅.
+   - **§E 발견: 실/혼합 모델이 주황조명·어두운스팀에 헛불(fpr~0.22). 누수통제 그룹이 최선(0.085·recall유지).** 순수 스팀엔 안 속음. 합성 낮은 fpr은 recall 낮아서 착시.
+2. **핵심 다음 = 헛불 고치기(값쌈, 데이터 있음)**: 헛불 낸 하드네거티브(주황조명 13476222·13578888·어두운스팀 8094275 등, oilfire_hardneg/nofire)를 **학습에 추가**해 real_only/mixed 재학습 → fpr 낮추기(급식실 화재 데이터 불요). ② 진짜 초기(아지랑이·연기만)·급식실 시점은 여전히 미검증.
 3. **그 후 A안(전이학습)**: 일반 화재(Indoor) 사전학습 → 소량 급식실/유류 fine-tune. test=목표 도메인·씬분리·불가침(소량이면 LOSO CV).
 4. **후순위**: New_sample(야외 JSON) 변환 · (합성 추가는 "무기여"라 낮음).
-5. 모델: `runs_if/{real_only,mixed,real_only_grouped}/weights/best.pt` · 결과 `indoorfire_eval/{indoorfire_train,indoorfire_regroup,indoorfire_split_audit,oilfire_pilot_eval,oilfire_early_eval}.json` · 스크립트 `colab_indoorfire_split_audit.py`·`colab_oilfire_eval.py`(EVAL_SET=oilfire_pilot/oilfire_early)·`colab_inspect_newdata.py`. **유류화재 test = `oilfire_pilot.zip`(큰불 65/14) · `oilfire_early.zip`(초기·작은불 30/10, 파일럿과 분리) — Drive 루트, 로컬 scratchpad에도 원본 프레임·큐레이션 폴더.**
+5. 모델: `runs_if/{real_only,mixed,real_only_grouped}/weights/best.pt` · 결과 `indoorfire_eval/{indoorfire_train,indoorfire_regroup,indoorfire_split_audit,oilfire_pilot_eval,oilfire_early_eval,oilfire_hardneg_eval}.json` · 스크립트 `colab_indoorfire_split_audit.py`·`colab_oilfire_eval.py`(EVAL_SET·소스별 fpr)·`colab_build_hardneg.py`(루트 조리영상→하드네거)·`colab_inspect_newdata.py`(INSPECT_ALL). **test: `oilfire_pilot.zip`(큰불65/14)·`oilfire_early.zip`(초기불30/10)·하드네거 = Drive 루트 조리영상16개→build로 `fire_frames/oilfire_hardneg`(nofire130/sanity10). 로컬 scratchpad에 원본·큐레이션.**
    - 데이터 수집 함정: **YouTube는 Colab(데이터센터 IP) 봇 차단** → 로컬 PC(주거IP)에서 yt-dlp 받고 ffmpeg로 프레임 추출·검증 후 zip 업로드. Drive 커넥터는 **blessmoonkh** 계정(seochorobotics 루트 새 파일 검색 안 됨, fire_frames는 공유돼 열림).
 - 문서 지도: 미팅 이후 전체 = `docs/AFTER_meeting.md` · 수집사양/놓침진단 = `docs/DATA_collection_spec.md` · 미팅용(v1~v3) = `docs/SUMMARY_meeting.md`.
 
