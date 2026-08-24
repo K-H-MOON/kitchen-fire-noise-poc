@@ -76,10 +76,16 @@ for key, best in models.items():
     for p, f in zip(fire_imgs, fdet):
         by_src.setdefault(source(p), []).append(f)
     src_rec = {s: float(np.mean(v)) for s, v in by_src.items()}
-    scene_mean = float(np.mean(list(src_rec.values())))
-    scene_std = float(np.std(list(src_rec.values())))
+    scene_mean = float(np.mean(list(src_rec.values()))) if src_rec else 0.0
+    scene_std = float(np.std(list(src_rec.values()))) if src_rec else 0.0
+    # 소스별 fpr (하드네거티브 test: 어떤 조리 유형이 헛불 내나)
+    by_src_n = {}
+    for p, f in zip(nof_imgs, ndet):
+        by_src_n.setdefault(source(p), []).append(f)
+    src_fpr = {s: float(np.mean(v)) for s, v in by_src_n.items()}
     rows[key] = dict(recall=recall, precision=prec, fpr=fpr, fire_det=fd, nof_det=nd,
-                     scene_recall=src_rec, scene_mean=scene_mean, scene_std=scene_std)
+                     scene_recall=src_rec, scene_mean=scene_mean, scene_std=scene_std,
+                     scene_fpr=src_fpr)
 
 print('\n' + '=' * 74)
 print(f'도메인 이동 평가 [{NAME}] · frame-level (conf 0.25)')
@@ -95,7 +101,14 @@ for k, r in rows.items():
     for s, v in r['scene_recall'].items():
         print(f'      {s:<22} {v:.3f}')
 
-print('\n해석: ② 실/③ 혼합/②g 실-그룹 이 ① 합성보다 기름불 recall↑면 "실데이터가 목표 도메인에도 전이".')
+print('\n소스별 fpr (하드네거티브: 어떤 조리 유형이 헛불 내나):')
+for k, r in rows.items():
+    if r.get('scene_fpr'):
+        print(f'  {k}')
+        for s, v in r['scene_fpr'].items():
+            print(f'      {s:<22} {v:.3f}')
+
+print('\n해석: ② 실/③ 혼합/②g 실-그룹 이 ① 합성보다 유류화재 recall↑면 "실데이터가 목표 도메인에도 전이".')
 print('경계: 시연 오버레이 잔존 · 급식실 아닌 시연 세트 · 장면 N=4(수치 큰 CI).')
 json.dump({'conf': CONF, 'n_fire': len(fire_imgs), 'n_nof': len(nof_imgs), 'rows': rows},
           open(f'{OUT}/{NAME}_eval.json', 'w'), ensure_ascii=False, indent=1, default=float)

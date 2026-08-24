@@ -97,6 +97,9 @@ print('=' * 66); print('1) 동영상 검사'); print('=' * 66)
 v = os.environ.get('INSPECT_MP4')
 if v:
     mp4s = [v if os.path.isabs(v) else f'{ROOT}/{v}']
+elif os.environ.get('INSPECT_ALL') == '1':
+    # 루트의 모든 mp4(거대 파일 200MB 초과는 제외 — 360 원본 등)
+    mp4s = [p for p in sorted(glob.glob(f'{ROOT}/*.mp4')) if os.path.getsize(p) < 200e6]
 else:
     mp4s = (sorted(glob.glob(f'{ROOT}/yt_*.mp4'))
             or sorted(glob.glob(f'{ROOT}/*Kitchen_Fire*.mp4'))
@@ -106,6 +109,10 @@ if not mp4s:
 for mp4 in mp4s:
     tag = os.path.splitext(os.path.basename(mp4))[0][:24]
     sample_video(mp4, tag)
+
+if os.environ.get('INSPECT_ALL') == '1':
+    print('\nINSPECT_ALL → zip 검사 건너뜀. 시트: fire_frames/inspect/inspect_*.jpg')
+    raise SystemExit(0)
 
 # ---------------------------------------------------------------------------
 # 2) zip
