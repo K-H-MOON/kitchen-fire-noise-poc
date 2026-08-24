@@ -125,10 +125,10 @@ try:
 except Exception:
     F = ImageFont.load_default()
 
-def sheet(items, name, label):
-    items = items[:24]
+def sheet(items, name, label, cap=16):
+    items = items[:cap]
     if not items:
-        print(f'  ({label} 없음 — 시트 생략)'); return
+        return
     CW = 320; cols = 4; rows = (len(items) + cols - 1) // cols
     im0 = Image.open(items[0][2]).convert('RGB'); ch = round(CW * im0.height / im0.width)
     sh = Image.new('RGB', (cols * CW, rows * (ch + 22)), (16, 16, 16))
@@ -144,8 +144,13 @@ def sheet(items, name, label):
     print(f'-> {OUT}/{name}.jpg  ({len(items)}장, L=밝기·c=conf)')
 
 print()
-sheet([r for r in fire_all if not r[3]], '_miss', '놓침')
-sheet([r for r in recs if r[1] == 'nofire' and r[3]], '_fp', '헛불')
+# 영상별 시트 — 각 영상의 실패 유형을 따로 판독 (jikken이 전체를 채우는 문제 방지)
+for v in VIDEOS:
+    sheet([r for r in recs if r[0] == v and r[1] == 'fire' and not r[3]], f'_miss_{v}', '놓침')
+    sheet([r for r in recs if r[0] == v and r[1] == 'nofire' and r[3]], f'_fp_{v}', '헛불')
+# 전체 통합 시트(참고)
+sheet([r for r in fire_all if not r[3]], '_miss_all', '놓침', cap=24)
+sheet([r for r in recs if r[1] == 'nofire' and r[3]], '_fp_all', '헛불', cap=24)
 
 json.dump({'model': MODEL, 'conf': CONF, 'videos': VIDEOS,
            'per_frame': [(r[0], r[1], r[3], round(r[4], 3), round(r[5], 1)) for r in recs]},
