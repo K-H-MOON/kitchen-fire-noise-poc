@@ -3,6 +3,15 @@
 > **v1·v2·v3 모두 실제 전이 약함(불꽃·표현 레버 아님) → 병목 = 데이터/도메인.** 회의 후 신규 방향 논의 중(아래 §회의 후 신규 방향).
 > 완료: v2 A/B(음성)·v2 precision/recall·v3 DINOv3 프로브(음성 근접)·미팅 문서 일습(SUMMARY·DETAIL·MEETING_v3_probe).
 
+## ⚠️ 중대 발견 — realfire 평가셋 오염 (2026-08-24)
+error-analysis(`colab_realfire_erroranalysis.py`) 영상별 시트 육안 결과:
+- **jikken·kanetsu·hisomu = 편집 소방 PSA 영상**(자막·PIP·만화 불·타이틀 카드) → "fire" 라벨인데 실제 불 없거나 그래픽에 가려짐 → 정당한 무검출이 miss로 집계.
+- **grease "nofire" 오라벨**(실제 불 포함) → 정확 검출이 FP로 집계. + 야외 화재(주방 아님).
+- "밝은 장면 놓침"은 착오(그래픽 밝기).
+- **함의: realfire recall(0.31·0.27…) 절대값은 오염·과소평가 → 신뢰 불가.** 상대 비교(C3≈C0·DINOv3 미미)는 비교적 견고(같은 셋 공유). 가장 깨끗한 grease 54% 검출이 방증.
+- **미확정 부차 신호**: 큰/벽 화재 과소검출(kanetsu·hisomu) 가능성 — 오염과 뒤섞여 확정 못 함.
+- **→ #1 우선순위 = 깨끗한 realfire 평가셋 재큐레이션/확보** (편집·오라벨 제외, 실촬영 주방·유류). 상세 `docs/DATA_collection_spec.md §9`.
+
 ## 회의 후 신규 방향 메모 (2026-08-24)
 
 **전이 낮음의 기여 요인 (주→부):**
