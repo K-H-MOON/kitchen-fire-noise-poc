@@ -45,10 +45,13 @@ def duration(p):
         return 20.0
 
 # --- 하드네거티브 프레임 추출 (루트 스톡 조리 영상) ---
+# 제외: 화재 원본·yt_·부적합(주방/조리 아님). HARDNEG_EXCLUDE 로 추가 지정(쉼표구분 substring).
+EXCLUDE = ['Kitchen_Fire', '7409223']  # 7409223 = 테킬라 정물(주방 아님)
+EXCLUDE += [s for s in os.environ.get('HARDNEG_EXCLUDE', '').split(',') if s]
 vids = [p for p in sorted(glob.glob(f'{ROOT}/*.mp4'))
         if os.path.getsize(p) < 200e6
-        and 'Kitchen_Fire' not in os.path.basename(p)
-        and not os.path.basename(p).startswith('yt_')]
+        and not os.path.basename(p).startswith('yt_')
+        and not any(x in os.path.basename(p) for x in EXCLUDE)]
 print(f'하드네거티브 소스 영상 {len(vids)}개:')
 for v in vids:
     print('  ', os.path.basename(v))
