@@ -24,8 +24,9 @@ except ImportError:
 FIRE = '/content/drive/MyDrive/fire_frames'
 RUNS = f'{FIRE}/runs_phaseB'
 IFRUN = f'{FIRE}/runs_if'
-ZIP  = '/content/drive/MyDrive/oilfire_pilot.zip'
-TEST = f'{FIRE}/oilfire_pilot'
+NAME = os.environ.get('EVAL_SET', 'oilfire_pilot')   # oilfire_pilot(큰불) / oilfire_early(초기·작은 불)
+ZIP  = f'/content/drive/MyDrive/{NAME}.zip'
+TEST = f'{FIRE}/{NAME}'
 OUT  = f'{FIRE}/indoorfire_eval'
 CONF = 0.25
 
@@ -81,7 +82,7 @@ for key, best in models.items():
                      scene_recall=src_rec, scene_mean=scene_mean, scene_std=scene_std)
 
 print('\n' + '=' * 74)
-print('도메인 이동 파일럿 — 기름불 test · frame-level (conf 0.25)')
+print(f'도메인 이동 평가 [{NAME}] · frame-level (conf 0.25)')
 print('=' * 74)
 print(f'{"모델":<26}{"recall":>8}{"prec":>7}{"fpr":>7}{"scene_mean±std":>18}')
 for k, r in rows.items():
@@ -97,5 +98,5 @@ for k, r in rows.items():
 print('\n해석: ② 실/③ 혼합/②g 실-그룹 이 ① 합성보다 기름불 recall↑면 "실데이터가 목표 도메인에도 전이".')
 print('경계: 시연 오버레이 잔존 · 급식실 아닌 시연 세트 · 장면 N=4(수치 큰 CI).')
 json.dump({'conf': CONF, 'n_fire': len(fire_imgs), 'n_nof': len(nof_imgs), 'rows': rows},
-          open(f'{OUT}/oilfire_pilot_eval.json', 'w'), ensure_ascii=False, indent=1, default=float)
-print(f'\n-> {OUT}/oilfire_pilot_eval.json')
+          open(f'{OUT}/{NAME}_eval.json', 'w'), ensure_ascii=False, indent=1, default=float)
+print(f'\n-> {OUT}/{NAME}_eval.json')
