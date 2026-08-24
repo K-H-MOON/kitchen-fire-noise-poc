@@ -1,13 +1,13 @@
 # HANDOFF — 다음 세션 이어가기 (2026-08-24 갱신)
 
-> **v1·v2·v3 모두 실제 전이 약함(불꽃·표현 레버 아님) → 병목 = 데이터/도메인.** 회의 후 = **실제 데이터로 공략 중**(아래 §회의 후 신규 방향·§실험 A).
-> 완료: v2 A/B(음성)·v2 precision/recall·v3 DINOv3 프로브(음성 근접)·realfire 오염 발견·Indoor Fire Smoke 깨끗한 첫 측정(recall 0.20)·미팅 문서 일습.
+> **v1·v2·v3 모두 실제 전이 약함(불꽃·표현 레버 아님) → 병목 = 데이터/도메인.** 회의 후 = **실제 데이터로 공략** → **실험 A 완료: 실데이터 학습이 놓침을 없앰 확인**(같은 Indoor test recall **0.235→0.985**). 단 같은 도메인·프레임분할 누수라 절대값 낙관적; 견고한 건 방향(§AFTER_meeting §5).
+> 완료: v2 A/B(음성)·v2 precision/recall·v3 DINOv3 프로브(음성 근접)·realfire 오염 발견·Indoor 깨끗한 첫 측정(recall 0.20)·**실험 A(합성 0.235 / 실 0.985 / 혼합 0.985)**·미팅 문서 일습.
 
-## ▶ 새 세션 첫 작업 (2026-08-24 시점)
-1. **실험 A 학습 결과 받기** — Colab에서 `colab_indoorfire_train.py` 실행 중이었음(3조건: 합성-only/실-only/혼합, 같은 Indoor test 750). 끝나면 `runs_if/(real_only|mixed)/`에 best.pt·results.png, `indoorfire_eval/indoorfire_train.json`에 표. **RUN='evalonly'로 재측정 가능**(재학습 없이).
-2. **결과 3조건 표(recall/precision/fpr)를 채우기** → `docs/AFTER_meeting.md` 결과 표 + `docs/HANDOFF.md` §실험 A "결과" 칸.
-3. **판정**: 2·3 ≫ 1(=합성 0.20)이면 "실데이터가 놓침 줄임" 확인 · 3 vs 2로 합성 기여.
-4. **다음 후보**: ① 급식실 근접 검증(정리한 realfire) ② 합성에 큰 불꽃 추가(colab_synth의 FLAME_H_RANGE↑, "큰 불 과소검출" 사각 공략) ③ New_sample(야외·JSON) 변환해 실데이터 확대.
+## ▶ 새 세션 첫 작업 (2026-08-24 실험 A 완료 후)
+1. ~~실험 A 학습 결과 받기~~ ✅ · ~~결과 표 채우기~~ ✅(AFTER_meeting §5·아래 §실험 A) · ~~판정~~ ✅(② ≫ ①: 놓침 병목 실데이터로 해소 · ③≈②: 합성 무기여).
+2. **판정의 절대값 검증 (핵심 다음)**: 0.985는 같은 도메인+프레임분할 누수로 부풀었을 가능성 큼. → **(a) 씬/영상 단위 분할로 재측정**(누수 통제) · **(b) 도메인 이동 평가** = real_only/mixed best.pt를 **급식실 근접 realfire(정리분)**·유류화재에 돌려 전이 확인.
+3. **다음 후보**: ① 급식실 근접 검증(정리한 realfire, 위 2b) ② New_sample(야외·JSON) 변환해 실데이터 확대 ③ (합성 큰 불꽃 추가는 실험 A가 "합성 무기여"를 보였으니 **우선순위 낮음**).
+4. 모델: `runs_if/real_only/weights/best.pt`·`runs_if/mixed/weights/best.pt`(Drive) · 결과 `indoorfire_eval/indoorfire_train.json` · **RUN='evalonly'로 재학습 없이 재측정 가능**.
 - 문서 지도: 미팅 이후 전체 = `docs/AFTER_meeting.md` · 수집사양/놓침진단 = `docs/DATA_collection_spec.md` · 미팅용(v1~v3) = `docs/SUMMARY_meeting.md`.
 
 ## ⚠️ 중대 발견 — realfire 평가셋 오염 (2026-08-24)
@@ -26,14 +26,24 @@ error-analysis(`colab_realfire_erroranalysis.py`) 영상별 시트 육안 결과
 - 경계: 이 셋은 일반 실내 화재(주방/유류 아님)라 "전이 약함+도메인 상이" 혼재. PSA(0.27~0.31)보다 낮은 건 PSA가 그나마 주방/유류라서로 해석. 방향(recall↓·precision↑)은 확정, 절대값은 도메인 의존.
 - **다음 실험(핵심): 실제 화재를 train에 넣으면 recall이 오르나** — Indoor Fire Smoke train으로 학습 → 그 test로 평가(누수 차단). 이게 "실데이터 투입=도메인갭 축소" 직접 검증.
 
-### 실험 A — 합성 vs 실 vs 혼합 (진행 중, 2026-08-24)
+### 실험 A — 합성 vs 실 vs 혼합 (완료, 2026-08-24)
 - **목적**: 실데이터 학습이 recall(놓침)을 올리나.
 - **데이터**: Indoor Fire Smoke를 **fire-only(1클래스)**로 재구성(smoke 제거, 합성과 공정 비교). **70/15/15 = train 3500 / valid 750 / test 750(fire 392·nofire 358).**
 - **라벨 육안 감사 통과**: nofire=연기·수증기·가습기 미스트·향연기(불꽃 없음, 좋은 하드네거) · fire=박스가 실제 불꽃 위. grease류 체계적 오라벨 없음 → precision·fpr 신뢰 가능.
 - **3조건 · 같은 test**: ① 합성-only(기존 v8_C0_s1) · ② 실-only(Indoor train) · ③ 혼합(합성 synth_C0 + Indoor train). **val=Indoor valid(실제 val → "합성 val 손해" 해소).**
 - **지표**: frame-level recall/precision/fpr. 스크립트 `colab_indoorfire_train.py`(EPOCHS 60 cap·patience 15·학습곡선 자동표시).
 - **경계**: 일반 실내 화재(주방/유류 아님) → "실데이터가 실화재 recall 올리나"는 답하나 급식실 성능은 별개. Roboflow 랜덤분할 약한 누수 가능.
-- **결과**: (학습 후 채움 — 3조건 recall/precision/fpr).
+- **결과 (같은 Indoor test · frame-level · 각 60ep)**:
+
+  | 조건 | recall | precision | fpr | 검출(fire) |
+  |---|---:|---:|---:|---:|
+  | ① 합성-only | 0.235 | 0.868 | 0.039 | 92/392 |
+  | ② 실-only | **0.985** | **0.990** | 0.011 | 386/392 |
+  | ③ 혼합 | **0.985** | 0.980 | 0.022 | 386/392 |
+
+  - **판정**: ② ≫ ① → **놓침(recall) 병목은 실데이터로 해소**(0.235→0.985, 놓침 300→6). ③≈② (혼합이 precision·fpr 미세하게 나쁨) → **합성 무기여**(v1~v3 정합).
+  - **⚠️ 절대값 경계**: 같은 도메인 test + 프레임 랜덤분할 누수 → 0.985 부풀었을 가능성 큼. **방향만 견고.** 다음 = 씬/영상 분할 재측정 · 급식실 근접 도메인이동 평가(§새 세션 첫 작업 2).
+  - json `indoorfire_eval/indoorfire_train.json` · 모델 `runs_if/(real_only|mixed)/weights/best.pt`.
 
 ## 회의 후 신규 방향 메모 (2026-08-24)
 
