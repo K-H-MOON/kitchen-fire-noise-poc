@@ -1,7 +1,14 @@
 # HANDOFF — 다음 세션 이어가기 (2026-08-24 갱신)
 
-> **v1·v2·v3 모두 실제 전이 약함(불꽃·표현 레버 아님) → 병목 = 데이터/도메인.** 회의 후 신규 방향 논의 중(아래 §회의 후 신규 방향).
-> 완료: v2 A/B(음성)·v2 precision/recall·v3 DINOv3 프로브(음성 근접)·미팅 문서 일습(SUMMARY·DETAIL·MEETING_v3_probe).
+> **v1·v2·v3 모두 실제 전이 약함(불꽃·표현 레버 아님) → 병목 = 데이터/도메인.** 회의 후 = **실제 데이터로 공략 중**(아래 §회의 후 신규 방향·§실험 A).
+> 완료: v2 A/B(음성)·v2 precision/recall·v3 DINOv3 프로브(음성 근접)·realfire 오염 발견·Indoor Fire Smoke 깨끗한 첫 측정(recall 0.20)·미팅 문서 일습.
+
+## ▶ 새 세션 첫 작업 (2026-08-24 시점)
+1. **실험 A 학습 결과 받기** — Colab에서 `colab_indoorfire_train.py` 실행 중이었음(3조건: 합성-only/실-only/혼합, 같은 Indoor test 750). 끝나면 `runs_if/(real_only|mixed)/`에 best.pt·results.png, `indoorfire_eval/indoorfire_train.json`에 표. **RUN='evalonly'로 재측정 가능**(재학습 없이).
+2. **결과 3조건 표(recall/precision/fpr)를 채우기** → `docs/AFTER_meeting.md` 결과 표 + `docs/HANDOFF.md` §실험 A "결과" 칸.
+3. **판정**: 2·3 ≫ 1(=합성 0.20)이면 "실데이터가 놓침 줄임" 확인 · 3 vs 2로 합성 기여.
+4. **다음 후보**: ① 급식실 근접 검증(정리한 realfire) ② 합성에 큰 불꽃 추가(colab_synth의 FLAME_H_RANGE↑, "큰 불 과소검출" 사각 공략) ③ New_sample(야외·JSON) 변환해 실데이터 확대.
+- 문서 지도: 미팅 이후 전체 = `docs/AFTER_meeting.md` · 수집사양/놓침진단 = `docs/DATA_collection_spec.md` · 미팅용(v1~v3) = `docs/SUMMARY_meeting.md`.
 
 ## ⚠️ 중대 발견 — realfire 평가셋 오염 (2026-08-24)
 error-analysis(`colab_realfire_erroranalysis.py`) 영상별 시트 육안 결과:
