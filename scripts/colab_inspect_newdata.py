@@ -91,14 +91,21 @@ def sample_video(path, tag):
     sheet(fps_paths, labels, f'{OUT}/inspect_{tag}.jpg')
 
 # ---------------------------------------------------------------------------
-# 1) mp4
+# 1) mp4 (여러 개 지원 — yt_*.mp4 우선, 각각 개별 시트)
 # ---------------------------------------------------------------------------
 print('=' * 66); print('1) 동영상 검사'); print('=' * 66)
-mp4 = find_one('INSPECT_MP4', ['*Kitchen_Fire*.mp4', '*.mp4'])
-if mp4:
-    sample_video(mp4, 'video')
+v = os.environ.get('INSPECT_MP4')
+if v:
+    mp4s = [v if os.path.isabs(v) else f'{ROOT}/{v}']
 else:
+    mp4s = (sorted(glob.glob(f'{ROOT}/yt_*.mp4'))
+            or sorted(glob.glob(f'{ROOT}/*Kitchen_Fire*.mp4'))
+            or sorted(glob.glob(f'{ROOT}/*.mp4')))
+if not mp4s:
     print('  루트에서 mp4 못 찾음 (INSPECT_MP4 로 지정)')
+for mp4 in mp4s:
+    tag = os.path.splitext(os.path.basename(mp4))[0][:24]
+    sample_video(mp4, tag)
 
 # ---------------------------------------------------------------------------
 # 2) zip
