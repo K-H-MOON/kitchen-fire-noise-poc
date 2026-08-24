@@ -7,6 +7,13 @@
 1. ~~실험 A~~✅ · ~~누수통제~~✅(그룹0.899) · ~~§C큰불~~✅(실0.985) · ~~§D초기작은불~~✅(실0.97~1.0) · ~~§E 헛불 검증~~✅.
    - **§E 발견: 실/혼합 모델이 주황조명·어두운스팀에 헛불(fpr~0.22). 누수통제 그룹이 최선(0.085·recall유지).** 순수 스팀엔 안 속음. 합성 낮은 fpr은 recall 낮아서 착시.
 2. **핵심 다음 = 헛불 고치기(값쌈, 데이터 있음)**: 헛불 낸 하드네거티브(주황조명 13476222·13578888·어두운스팀 8094275 등, oilfire_hardneg/nofire)를 **학습에 추가**해 real_only/mixed 재학습 → fpr 낮추기(급식실 화재 데이터 불요). ② 진짜 초기(아지랑이·연기만)·급식실 시점은 여전히 미검증.
+
+   **▶▶ 즉시 첫 액션 (헛불 고치기 절차):**
+   - **데이터**: 하드네거 130장(16장면) = `fire_frames/oilfire_hardneg/nofire/*.jpg`(빈 라벨=음성). 원본 조리영상 16개는 seochorobotics Drive 루트, `colab_build_hardneg.py`로 재생성 가능.
+   - **⚠️ 누수 차단(필수)**: 하드네거 16장면을 **train용/test용으로 분리**(예: 12장면 train, 4장면 held-out test). **같은 영상 프레임이 train·test에 겹치면 안 됨**(지금까지 지킨 원칙). 파일명 prefix(소스)로 장면 단위 split.
+   - **학습**: `colab_indoorfire_train.py` 변형 — if_fire/train 에 train용 하드네거를 **빈 라벨(.txt 0바이트)로 추가** 후 real_only(및 mixed) 재학습(fire-only 1클래스 유지). val=Indoor valid 그대로.
+   - **검증**: 재학습 모델을 ① held-out 하드네거로 재측정(`colab_oilfire_eval.py`류) → **fpr 내려갔나** ② `EVAL_SET=oilfire_pilot`·`oilfire_early` → **recall 유지되나(회귀 없나)**. 둘 다 좋으면 성공.
+   - 기대: real_only fpr 0.223 → 하향(그룹 0.085 근처?), recall 0.9+ 유지. 안 되면 하드네거 비율·에폭 조정.
 3. **그 후 A안(전이학습)**: 일반 화재(Indoor) 사전학습 → 소량 급식실/유류 fine-tune. test=목표 도메인·씬분리·불가침(소량이면 LOSO CV).
 4. **후순위**: New_sample(야외 JSON) 변환 · (합성 추가는 "무기여"라 낮음).
 5. 모델: `runs_if/{real_only,mixed,real_only_grouped}/weights/best.pt` · 결과 `indoorfire_eval/{indoorfire_train,indoorfire_regroup,indoorfire_split_audit,oilfire_pilot_eval,oilfire_early_eval,oilfire_hardneg_eval}.json` · 스크립트 `colab_indoorfire_split_audit.py`·`colab_oilfire_eval.py`(EVAL_SET·소스별 fpr)·`colab_build_hardneg.py`(루트 조리영상→하드네거)·`colab_inspect_newdata.py`(INSPECT_ALL). **test: `oilfire_pilot.zip`(큰불65/14)·`oilfire_early.zip`(초기불30/10)·하드네거 = Drive 루트 조리영상16개→build로 `fire_frames/oilfire_hardneg`(nofire130/sanity10). 로컬 scratchpad에 원본·큐레이션.**
