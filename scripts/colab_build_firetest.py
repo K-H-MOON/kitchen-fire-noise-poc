@@ -43,7 +43,7 @@ os.makedirs(INSP, exist_ok=True)
 # 채택 16장면(test·train 겸용) — 각 토큰은 oilfire_raw 에서 정확히 1파일과 매칭돼야 함.
 ACCEPTED = [
     'How to Prevent', 'Chip pan', 'Cooking Fire Safety', 'Kitchen Grease Fire Safety',
-    '2 東京防災', 'IHこんろ「4', '発生するまで', 'シミュレーション', '恐怖',
+    '2 東京防災', 'IHこんろ「4', '発生', 'シミュレーション', '恐怖',
     '1637681405', '401469436', '774563476', '32125355803', '34938882503',
     'NIST_Cooktop Reignition', 'NIST_Cooktop ignition',
 ]
