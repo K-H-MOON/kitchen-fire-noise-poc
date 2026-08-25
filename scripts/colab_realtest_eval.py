@@ -23,12 +23,14 @@ IFRUN = f'{FIRE}/runs_if'
 TEST  = os.environ.get('OUT_DIR', f'{FIRE}/oilfire_realtest')   # build 와 동일 경로(로컬 가능)
 OUT   = os.environ.get('EVAL_OUT', f'{FIRE}/indoorfire_eval')   # 결과 json(작은 1파일)
 CONF  = float(os.environ.get('CONF', '0.25'))
+# 급식실(조리) 음성 경로 override: ⑤ 재학습 후 held-out 조리영상으로만 fpr 측정(누수 차단).
+COOK_TEST_DIR = os.environ.get('COOK_TEST_DIR', f'{TEST}/nofire_kitchen')
 
 drive.mount('/content/drive')
 os.makedirs(OUT, exist_ok=True)
 
 fire_imgs = sorted(glob.glob(f'{TEST}/fire/*.jpg'))
-cook_imgs = sorted(glob.glob(f'{TEST}/nofire_kitchen/*.jpg'))
+cook_imgs = sorted(glob.glob(f'{COOK_TEST_DIR}/*.jpg'))
 pre_imgs  = sorted(glob.glob(f'{TEST}/nofire_presrc/*.jpg'))
 assert fire_imgs, f'양성 없음: {TEST}/fire — colab_build_firetest.py(빌드 모드) 먼저'
 print(f'test: fire {len(fire_imgs)} · nofire_kitchen {len(cook_imgs)} · nofire_presrc {len(pre_imgs)}')
@@ -43,6 +45,7 @@ models = {
     '2_real_only':             f'{IFRUN}/real_only/weights/best.pt',
     '2g_real_only_grouped':    f'{IFRUN}/real_only_grouped/weights/best.pt',
     '2gh_real_only_grouped_hn': f'{IFRUN}/real_only_grouped_hn/weights/best.pt',
+    '2ck_real_only_grouped_ck': f'{IFRUN}/real_only_grouped_ck/weights/best.pt',  # ⑤ 급식실 조리 네거티브 재학습
 }
 
 

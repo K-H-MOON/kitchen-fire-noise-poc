@@ -59,9 +59,10 @@ SEED       = int(os.environ.get('SEED', '0'))
 BASE_MODEL = os.environ.get('BASE_MODEL', 'v8_C0_s1')   # 합성-only 앵커
 SYN_COND   = os.environ.get('SYNTH_COND', 'C0')
 SYN_TRAIN  = f'{FIRE}/synth_{SYN_COND}/train'
-HARDNEG    = os.environ.get('HARDNEG', '0') == '1'      # 하드네거 주입(헛불 고치기) → 모델명 _hn
+HARDNEG    = os.environ.get('HARDNEG', '0') == '1'      # 하드네거 주입(헛불 고치기) → 모델명 _<HN_TAG>
 HN_TRAIN   = os.environ.get('HARDNEG_TRAIN_DIR', f'{FIRE}/oilfire_hardneg_train/nofire')
-SUF        = '_hn' if HARDNEG else ''
+HN_TAG     = os.environ.get('HN_TAG', 'hn')             # 접미사(§F=hn · 급식실조리=ck 등, 모델 덮어쓰기 방지)
+SUF        = f'_{HN_TAG}' if HARDNEG else ''
 
 os.makedirs(OUT, exist_ok=True)
 if not os.path.isdir(RAW) or not os.listdir(RAW):
