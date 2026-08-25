@@ -27,6 +27,7 @@ COOK  = os.environ.get('COOK_DIR', '/content/drive/MyDrive/조리 데이터 영�
 MODEL = os.environ.get('MODEL', 'real_only_grouped_ck')
 STEP  = float(os.environ.get('STEP', '0.5'))
 CONF  = float(os.environ.get('CONF', '0.25'))
+COOK_MAXSEC = float(os.environ.get('COOK_MAXSEC', '120'))   # 조리 영상당 관측창 상한(초) — 전체추출 방지
 WORK  = '/content/temporal_frames'
 HELDOUT = [t.strip() for t in os.environ.get('HELDOUT', 'ck02,ck09,ck11,ck13,ck16,ck18,ck20,ck25').split(',') if t.strip()]
 drive.mount('/content/drive')
@@ -59,15 +60,16 @@ def duration(p):
 
 
 def grab_seq(v, s, e, tag):
+    """단일 ffmpeg 패스로 [s,e) 구간을 1/STEP fps 로 통째 추출(프레임당 프로세스 X → 10~50× 빠름)."""
     d = f'{WORK}/{tag}'
     os.makedirs(d, exist_ok=True)
     for f in glob.glob(f'{d}/*.jpg'):
         os.remove(f)
-    t = float(s); i = 0
-    while t <= float(e):
-        subprocess.run(['ffmpeg', '-v', 'error', '-ss', f'{t:.2f}', '-i', v, '-frames:v', '1',
-                        '-q:v', '3', f'{d}/{i:04d}.jpg'], check=False)
-        t += STEP; i += 1
+    dur = max(0.0, float(e) - float(s))
+    if dur <= 0:
+        return []
+    subprocess.run(['ffmpeg', '-v', 'error', '-ss', f'{float(s):.2f}', '-i', v, '-t', f'{dur:.2f}',
+                    '-vf', f'fps={1.0/STEP:.4f}', '-q:v', '3', f'{d}/%04d.jpg'], check=False)
     return sorted(glob.glob(f'{d}/*.jpg'))
 
 
@@ -113,7 +115,7 @@ for tok in HELDOUT:
     if tok not in cook_ids:
         print(f'  [스킵] {tok} 없음'); continue
     v = cook_ids[tok]
-    seq = detect_seq(grab_seq(v, 0, duration(v), f'cook_{tok}'))
+    seq = detect_seq(grab_seq(v, 0, min(duration(v), COOK_MAXSEC), f'cook_{tok}'))
     if len(seq):
         cook_seqs[tok] = seq
 print(f'  조리 비-이벤트 {len(cook_seqs)}개 (held-out 영상)')
@@ -138,8 +140,9 @@ for (K, WIN) in GRID:
     print(f'{f"{K}-of-{WIN}":<14}{frec:>16.3f}{cc:>14}{lc:>14}{tag}')
 
 print('\n판독: K=1(프레임단위) 대비 K-of-N 이 ① 불이벤트 recall 유지/회복 ② 조리 헛경보율↓ 이면 시간축 유효.')
-print('  지연=불 구간 시작~첫 경보(초). 낮을수록 조기경보. 경계: 구간 시작=불 시작 근사·held-out N 작음.')
-json.dump({'model': MODEL, 'step': STEP, 'conf': CONF,
+print('  지연=불 구간 시작~첫 경보(초). 낮을수록 조기경보. 경계: 구간 시작=불 시작 근사·held-out N 작음·'
+      f'조리 헛경보율은 영상당 관측창 {COOK_MAXSEC:.0f}s 기준(창 길수록 헛경보 기회↑).')
+json.dump({'model': MODEL, 'step': STEP, 'conf': CONF, 'cook_maxsec': COOK_MAXSEC,
            'n_fire_events': len(fire_seqs), 'n_cook': len(cook_seqs), 'grid': rows},
           open('/content/temporal_eval.json', 'w'), ensure_ascii=False, indent=1, default=float)
 print('\n-> /content/temporal_eval.json')
