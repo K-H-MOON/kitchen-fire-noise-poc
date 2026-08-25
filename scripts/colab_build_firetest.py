@@ -36,6 +36,7 @@ COOK  = os.environ.get('COOK_DIR', f'{DRIVE}/조리 데이터 영상')  # 급식
 OUT   = os.environ.get('OUT_DIR', f'{FIRE}/oilfire_realtest')  # test 출력
 INSP  = os.environ.get('INSP_DIR', f'{FIRE}/inspect')         # 몽타주 출력
 FIRE_STEP = float(os.environ.get('FIRE_STEP', '1.0'))
+FIRE_CAP  = int(os.environ.get('FIRE_CAP', '0'))    # 0=무제한 · >0이면 장면당 양성 상한(균등 서브샘플) — 과대표집 장면(NIST 등) 가중 완화
 COOK_STEP = float(os.environ.get('COOK_STEP', '6'))
 COOK_CAP  = int(os.environ.get('COOK_CAP', '8'))
 PRE_STEP  = float(os.environ.get('PRE_STEP', '2.0'))
@@ -139,13 +140,19 @@ for idx, tok in enumerate(ACCEPTED):
     if not rngs:
         print(f'  [불구간 없음·양성 제외] {sid} {tok}')
         continue
-    # 양성: 불 구간에서 FIRE_STEP 간격
+    # 양성: 불 구간에서 FIRE_STEP 간격 · (선택) FIRE_CAP 으로 장면당 균등 서브샘플
+    times = []
     for (s, e) in rngs:
         t = float(s)
         while t <= float(e):
-            if grab(v, t, f'{OUT}/fire/{sid}_{t:06.1f}s.jpg'):
-                n_fire += 1
+            times.append(round(t, 1))
             t += FIRE_STEP
+    if FIRE_CAP and len(times) > FIRE_CAP:
+        stp = len(times) / FIRE_CAP
+        times = [times[int(i * stp)] for i in range(FIRE_CAP)]
+    for t in times:
+        if grab(v, t, f'{OUT}/fire/{sid}_{t:06.1f}s.jpg'):
+            n_fire += 1
     # 동일소스 음성: 첫 불 시작 이전 [0.5, start-2] 구간(있으면)
     first = min(float(s) for (s, e) in rngs)
     t = 0.5
