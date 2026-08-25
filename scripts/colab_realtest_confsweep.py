@@ -23,10 +23,11 @@ FIRE  = '/content/drive/MyDrive/fire_frames'
 IFRUN = f'{FIRE}/runs_if'
 TEST  = os.environ.get('OUT_DIR', f'{FIRE}/oilfire_realtest')
 OUT   = os.environ.get('EVAL_OUT', '/content')
+COOK_TEST_DIR = os.environ.get('COOK_TEST_DIR', f'{TEST}/nofire_kitchen')   # ⑤ held-out 조리로 fpr
 drive.mount('/content/drive')
 
 fire_imgs = sorted(glob.glob(f'{TEST}/fire/*.jpg'))
-cook_imgs = sorted(glob.glob(f'{TEST}/nofire_kitchen/*.jpg'))
+cook_imgs = sorted(glob.glob(f'{COOK_TEST_DIR}/*.jpg'))
 pre_imgs  = sorted(glob.glob(f'{TEST}/nofire_presrc/*.jpg'))
 assert fire_imgs, f'양성 없음: {TEST}/fire'
 print(f'test: fire {len(fire_imgs)} · nofire_kitchen {len(cook_imgs)} · nofire_presrc {len(pre_imgs)}')
@@ -45,8 +46,9 @@ def maxconf(model, paths, base=0.01):
 
 
 models = {
-    '2g_real_only_grouped': f'{IFRUN}/real_only_grouped/weights/best.pt',
-    '2_real_only':          f'{IFRUN}/real_only/weights/best.pt',
+    '2g_real_only_grouped':    f'{IFRUN}/real_only_grouped/weights/best.pt',
+    '2ck_real_only_grouped_ck': f'{IFRUN}/real_only_grouped_ck/weights/best.pt',
+    '2_real_only':             f'{IFRUN}/real_only/weights/best.pt',
 }
 CONFS = [0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80]
 
