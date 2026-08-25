@@ -28,16 +28,20 @@ except ImportError:
     subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'pyyaml'], check=True)
     import yaml
 
-# --- Kaggle 인증 ---
-if not (os.environ.get('KAGGLE_USERNAME') and os.environ.get('KAGGLE_KEY')):
-    kj = '/content/kaggle.json'
-    if os.path.exists(kj):
-        os.makedirs('/root/.kaggle', exist_ok=True)
-        shutil.copy(kj, '/root/.kaggle/kaggle.json'); os.chmod('/root/.kaggle/kaggle.json', 0o600)
-    else:
-        print('⚠️ Kaggle 인증 없음: /content/kaggle.json 업로드하거나 KAGGLE_USERNAME·KAGGLE_KEY env 설정.')
-        print('   토큰 발급: https://www.kaggle.com/settings → Create New Token')
-        raise SystemExit(1)
+# --- Kaggle 인증 (구 kaggle.json[username/key] · 신 access_token[KGAT_...] 둘 다 지원) ---
+KDIR = os.path.expanduser('~/.kaggle'); os.makedirs(KDIR, exist_ok=True)
+_tok = os.environ.get('KAGGLE_API_TOKEN')          # 신형: KGAT_... (권장)
+if _tok:
+    open(f'{KDIR}/access_token', 'w').write(_tok.strip()); os.chmod(f'{KDIR}/access_token', 0o600)
+if os.path.exists('/content/kaggle.json'):          # 구형: 업로드한 kaggle.json
+    shutil.copy('/content/kaggle.json', f'{KDIR}/kaggle.json'); os.chmod(f'{KDIR}/kaggle.json', 0o600)
+_have = (os.path.exists(f'{KDIR}/access_token') or os.path.exists(f'{KDIR}/kaggle.json')
+         or (os.environ.get('KAGGLE_USERNAME') and os.environ.get('KAGGLE_KEY')))
+if not _have:
+    print('⚠️ Kaggle 인증 없음. 셋 중 하나:')
+    print("   (권장) os.environ['KAGGLE_API_TOKEN']='KGAT_...'  ← Settings→API→Create New Token")
+    print('   또는 /content/kaggle.json 업로드 · 또는 KAGGLE_USERNAME·KAGGLE_KEY env')
+    raise SystemExit(1)
 
 subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'kaggle'], check=True)
 
