@@ -1,8 +1,23 @@
 # HANDOFF — 다음 세션 이어가기 (2026-08-25 갱신)
 
-## ▶▶▶ 새 세션 즉시 작업 (2026-08-25 · A안 ④ 현재모델 측정, 진행 중)
+## ✅ A안 ④→⑤ 완료 (2026-08-25) — 배포후보 2ck @ conf 0.25
 
-**어디까지 왔나**: A안 데이터 수집 종료(28장면) → 지금 **frame-level 실화재 test 만들어 현재 모델 재측정**(A안 ④) 단계. test 빌더·측정 스크립트 완성, 이번 세션에 test까지 빌드했으나 **`/content`(로컬)에 있어 세션 종료로 소실 → 새 세션에서 재빌드~측정 통째로 진행.**
+**한 줄**: 실데이터로 recall 해결(0.81/0.85) → 급식실 조리 헛불(fpr)이 유일 병목 → **⑤ 급식실 조리 하드네거 재학습으로 fpr 10×↓(held-out 0.302→0.032), recall −3점(약한 흐린불에 집중)** → **배포후보 = `real_only_grouped_ck`(2ck) @ conf 0.25**(recall_sc 0.815 · fpr_급식실 0.032, ⑤ 전엔 불가능했던 "recall>0.80 & fpr<0.10" 운영점 달성).
+
+**A안 전체 궤적**:
+1. **④ 측정**: frame-level 실화재 test(양성=사람지정 불구간·음성=급식실 조리CCTV+발화전) 빌드→2g 재측정. 초측정 recall 0.710/fpr_급식실 0.260.
+2. **오염 발견·교정**: 셀2b(`colab_inspect_firetest_pos.py`) 양성 전수검증 → 교육/lab 영상 ±4s 근사가 비화염 삼킴(sc05 IHこんろ 78%=감자·텍스트카드·sc15 NIST ignition 50%=예열·sc02 잔해·sc08 빈프레임). 교정 RANGES(아래)+`FIRE_CAP=40`(NIST sc14 126프레임 과대표집 다운샘플) 재측정 → **깨끗 recall 0.813/scene 0.846**(synth 0.357). 깨끗 실화재 13/16장면 0.72~1.0, 유일 약점=NIST 창백극소형불(sc14 0.175·sc15 0.438).
+3. **conf 스윕**(`colab_realtest_confsweep.py`): 문턱조정만으론 불충분(recall>0.80 & fpr<0.10 지점 없음).
+4. **FP 진단**(`colab_diag_cook_fp.py`): 급식실 헛불 47/181 전부 **비화염**=불색 조리음식(볶음)·스팀·스테인리스 반사(실 배포주방=한국로보틱스 조리로봇, 개방화염 없음). ck03/07/08 100%. → ⑤ 정당(비화염이라 recall 위험↓·§F와 달리 28영상 다양성).
+5. **⑤ 재학습**(`colab_build_cook_negs.py`→`HN_TAG=ck` split_audit→eval): 조리CCTV 영상단위 train/held-out split(누수0), 조리네거 231장 주입. **같은 held-out(안 본 8영상·63프레임): fpr_급식실 0.302→0.032(10×), recall scene 0.846→0.815.** §F식 일반화 증명(ck03/07/08 학습→안 본 ck02/11/18 전이). §F가 실패한 일반화가 여기선 성공(장면 다양성 덕).
+6. **conf 스윕(2ck)**: 2ck가 2g/real_only를 전 구간 지배. 운영점 conf 0.25=스위트스폿(0.15로 낮춰도 recall +0.8점뿐·fpr 2배).
+
+**정직한 잔여 한계(향후과제)**: ⓐ sc14 창백극소형불 recall→0(문턱으로 회복 안 됨·안전상 흐린 초기불 놓침 → **시간축 성장감지**가 보완 여지) ⓑ held-out N 작음(fpr 2/63·CI 큼, 효과 10×라 방향은 확실) ⓒ fpr_발화전 0.336 불변(발화 직전=정상조리 헛불과 성격 다름·조기경보로 볼 수도) ⓓ 미검증=28영상 밖 다른 급식실 일반화·시간축 필터·실제 급식실 화재·frame-level 프록시. **다음 방향 후보=시간축 필터(밀집프레임 test 필요·sc14+스팀 동시 보완)·다른 급식실 수집·실 급식실 화재 확보.**
+
+**⚠️ 재현 함정(변함없음)**: (1)Drive `oilfire_raw`/작업본 FUSE 유실→로컬 `/content` (2)`/content` 세션리셋 소멸→**한 세션에 build~train~measure 연속** (3)`%run -i` 필수(RANGES 파이썬변수). ⑤ 재학습은 Indoor 재분할 포함 ~40분(L4).
+
+---
+### (참고) A안 ④→⑤ 재현 레시피 — 초기 진행용 원문 (이제 결과 확정)
 
 **⚠️ 중대 함정 3개(꼭 지킬 것)**:
 1. **Drive `oilfire_raw` 반복 유실**(Colab+Drive FUSE 비동기 쓰기 손실 추정) → **작업본은 로컬 `/content`에서.** 소스 영상은 Drive 루트에서 읽어 로컬로 복사(루트 85 mp4는 안정). 모델·평가결과 등 기존 산출물은 Drive에 멀쩡.
@@ -26,38 +41,60 @@ for u in ['https://www.nist.gov/video/cooktop-reignition-oil','https://www.nist.
     os.system(f'yt-dlp -o "{L}/NIST_%(title)s.%(ext)s" "{u}"')
 print('local oilfire_raw:', len(os.listdir(L)))   # ~68
 
-# (2) test 빌드 — RANGES + %run -i (아래 RANGES 는 확정본, 몽타주±4s 근사)
+# (2) test 빌드 — 교정 RANGES(오염 제거본) + FIRE_CAP=40(과대표집 완화) + %run -i
 os.environ['RAW_DIR']='/content/oilfire_raw'; os.environ['OUT_DIR']='/content/oilfire_realtest'
-RANGES = {
-    'How to Prevent':[(155,172)], 'Chip pan':[(13,15),(21,25),(29,32)], 'Cooking Fire Safety':[(9,22)],
-    'Kitchen Grease Fire Safety':[(30,32),(46,86)], '2 東京防災':[(91,138),(147,151)], 'IHこんろ「4':[(7,10),(59,63)],
-    '発生':[(185,256)], 'シミュレーション':[(33,36),(55,85)], '恐怖':[(11,13),(40,62)], '1637681405':[(11,21)],
+os.environ['FIRE_CAP']='40'
+RANGES = {   # ★교정본(셀2b 오염검증 반영). 원본 대비 좁힌 것: How to Prevent·Cooking·Grease·IH·恐怖·NIST ignition
+    'How to Prevent':[(160,171)], 'Chip pan':[(13,15),(21,25),(29,32)], 'Cooking Fire Safety':[(12,17)],
+    'Kitchen Grease Fire Safety':[(30,32),(46,85)], '2 東京防災':[(91,138),(147,151)], 'IHこんろ「4':[(7,8)],
+    '発生':[(185,256)], 'シミュレーション':[(33,36),(55,85)], '恐怖':[(12,13),(42,43),(54,57)], '1637681405':[(11,21)],
     '401469436':[(3,27)], '774563476':[(3,22)], '32125355803':[(9,42)], '34938882503':[(7,24)],
-    'NIST_Cooktop Reignition':[(24,136),(150,162)], 'NIST_Cooktop ignition':[(9,39)],
+    'NIST_Cooktop Reignition':[(24,136),(150,162)], 'NIST_Cooktop ignition':[(24,39)],
 }
 %run -i /content/kitchen-fire-noise-poc/scripts/colab_build_firetest.py
-# → fire(양성)~548 · nofire_kitchen(급식실조리 CCTV)~181 · nofire_presrc(발화전)~291
+# → fire(양성)~359 · nofire_kitchen(급식실조리 CCTV)~181 · nofire_presrc(발화전)~301
 
-# (2b) 양성 프레임 육안 검증 — 불 아닌 프레임 혼입 확인(측정 전 필수)
-os.environ['OUT_DIR']='/content/oilfire_realtest'; os.environ['INSP_DIR']='/content/inspect'
-%run /content/kitchen-fire-noise-poc/scripts/colab_inspect_firetest_pos.py
-# → /content/inspect/firetest_pos_<sc##>.jpg 를 채팅에 첨부해 확인.
-#    비화염 많이 섞인 장면은 그 RANGES 만 좁혀 (2)부터 재실행. 거의 다 불이면 통과 → (3).
+# (2b) 양성 프레임 육안 검증(셀2b) — 이미 반영됨. 재교정 시만 재실행.
+# os.environ['INSP_DIR']='/content/inspect'; %run /content/kitchen-fire-noise-poc/scripts/colab_inspect_firetest_pos.py
 
-# (3) 측정
+# (3) 측정 (2g/2ck 등 전 모델)
 os.environ['OUT_DIR']='/content/oilfire_realtest'; os.environ['EVAL_OUT']='/content'
 %run /content/kitchen-fire-noise-poc/scripts/colab_realtest_eval.py
+
+# ===== ⑤ 급식실 조리 하드네거 재학습 (fpr 공략) =====
+# (5a) 조리 네거티브 빌드 — 영상단위 split(누수0). HELDOUT 미지정 시 목록만 출력.
+os.environ['HELDOUT']='ck02,ck09,ck11,ck13,ck16,ck18,ck20,ck25'   # held-out(fpr 테스트)·나머지=train
+%run /content/kitchen-fire-noise-poc/scripts/colab_build_cook_negs.py
+# → /content/cook_neg_train/nofire (학습주입) · /content/cook_neg_test/nofire (held-out fpr)
+
+# (5b) 재학습(~40분, Indoor 재분할+60ep) → runs_if/real_only_grouped_ck
+os.environ['HARDNEG']='1'; os.environ['HARDNEG_TRAIN_DIR']='/content/cook_neg_train/nofire'
+os.environ['HN_TAG']='ck'; os.environ['EVAL_MIXED']='0'
+%run /content/kitchen-fire-noise-poc/scripts/colab_indoorfire_split_audit.py
+
+# (5c) 재측정 — recall(oilfire_realtest) + held-out 조리 fpr(누수 차단)
+os.environ['OUT_DIR']='/content/oilfire_realtest'; os.environ['EVAL_OUT']='/content'
+os.environ['COOK_TEST_DIR']='/content/cook_neg_test/nofire'
+%run /content/kitchen-fire-noise-poc/scripts/colab_realtest_eval.py         # 표에 2ck 행
+%run /content/kitchen-fire-noise-poc/scripts/colab_realtest_confsweep.py    # 2g/2ck 곡선(운영 conf)
 ```
-**셀 2b = 양성 프레임 검증** (스크립트 `colab_inspect_firetest_pos.py` · 위 레시피 (2b)에 편입 완료): RANGES가 ±4s 근사라 불 아닌 프레임 혼입 가능(→recall 과소평가). 측정 전 `/content/oilfire_realtest/fire/*.jpg` 장면별 몽타주로 눈확인, 비화염 많이 섞인 장면은 그 RANGES만 좁혀 재빌드. (누수·중복·불꽃가림 오염은 확인 완료·자유로움. 남은 유일 리스크가 이 양성 혼입.)
+**결과(확정)**: 위 레시피대로 2g recall 0.813/scene 0.846·fpr_급식실 0.260(오염교정 후) → ⑤ 후 2ck fpr_급식실 held-out 0.032·recall scene 0.815. 운영 conf 0.25. json: Drive `indoorfire_eval/{oilfire_realtest_eval_clean,indoorfire_regroup_ck}.json`·모델 `runs_if/real_only_grouped_ck/best.pt`.
 
-**판정 기준(④)**: `2g_real_only_grouped`(배포후보)의 **recall↑ & fpr_kitchen↓**이면 **fine-tune 불요 가능**(현재 모델 이미 쓸 만). 낮으면 ⑤ fine-tune 근거. recall은 양성만·fpr은 음성만 **분리 보고**(소스 스타일 혼입 상쇄). 경계: frame-level(위치 무시·관대)·장면 N 작음(CI 큼)·저해상 다수·급식실 근접(실 급식실 아님).
-
-**스크립트**: `colab_build_firetest.py`(RAW_DIR/OUT_DIR/INSP_DIR env·2모드[RANGES 없으면 몽타주, 있으면 빌드]) · `colab_inspect_firetest_pos.py`(OUT_DIR/INSP_DIR env·빌드된 양성 장면별 몽타주=셀 2b) · `colab_realtest_eval.py`(OUT_DIR/EVAL_OUT env). 채택 16 선정기준·최종풀 = `DATA_collection_spec.md §11`.
+**스크립트(A안 ④→⑤ 신규/수정, 전부 커밋·푸시됨)**:
+- `colab_build_firetest.py` — frame-level test 빌더(2모드·env RAW_DIR/OUT_DIR/INSP_DIR·**FIRE_CAP**=장면당 양성 상한 균등서브샘플)
+- `colab_inspect_firetest_pos.py` — 빌드된 양성 장면별 몽타주(셀2b·오염검증·env OUT_DIR/INSP_DIR)
+- `colab_realtest_eval.py` — 재측정(env OUT_DIR/EVAL_OUT/**COOK_TEST_DIR**·2g/2ck 등 전 모델)
+- `colab_realtest_confsweep.py` — conf 스윕(recall vs fpr 곡선·2g/2ck·COOK_TEST_DIR)
+- `colab_diag_cook_fp.py` — 급식실 FP 진단(예측박스 몽타주·env CONF/MODEL)
+- `colab_build_cook_negs.py` — ⑤ 조리네거 영상단위 split(2모드·env HELDOUT/COOK_TRAIN_OUT/COOK_TEST_OUT)
+- `colab_indoorfire_split_audit.py` — 재학습에 **HN_TAG**(접미사·_hn/_ck 분리) 추가
+채택 16 선정기준·최종풀 = `DATA_collection_spec.md §11`.
 
 
 > **v1·v2·v3 모두 실제 전이 약함(불꽃·표현 레버 아님) → 병목 = 데이터/도메인.** 회의 후 = **실제 데이터로 공략** → **실험 A: 실데이터 학습이 놓침 해소**(Indoor recall 0.235→0.985). **누수 통제 0.899로 견고**(누수 ~8.6점). **도메인 이동 파일럿: 유류화재 test 큰불(§C) 실 0.985·초기작은불(§D) 실 0.97~1.0 vs 합성 0.52·0.27 → 실데이터가 유류화재 큰불·초기불 모두에 전이**(누수 원천 불가 독립 test). §AFTER_meeting §5·§6.
 > **★2026-08-24 §F 헛불 고치기(하드네거 재학습) 완료 = 사실상 무효. 주황조명(13476222)이 모든 실모델에서 fpr 0.875~1.0로 요지부동 = "주황조명 FP는 데이터 문제" 확정(1장면뿐 유형은 일반화 못 함, 실증). 스팀은 이미 그룹모델이 해결. 다음 진짜 레버 = 주황 하드네거 장면 다수 수집. 상세 §F.**
-> **★2026-08-25 A안(전이학습) 데이터 수집 ✅종료: 4배치 총 69영상(영·일 소방데모+중국 실주방 CCTV+NIST lab)→전수 검수→깨끗 21장면(test·train겸용 16+세로 train전용 5)+경계 7 = 28장면. fine-tune 문턱(≥20~25) 여유 초과·도메인 다양성 확보(실 in-situ 주방·단체급식류·NIST고해상). ⚠️누수 2개(기존 oilfire_pilot/early 원본=일본 事故再現 2편) 학습 절대금지. 최종 풀·파일명 `DATA_collection_spec.md §11 "최종 풀"`. 다음=채택분 프레임 큐레이션→장면split→현재모델 새 test 재측정(자기교정 ①→②).**
+> **★2026-08-25 A안(전이학습) 데이터 수집 ✅종료: 4배치 총 69영상(영·일 소방데모+중국 실주방 CCTV+NIST lab)→전수 검수→깨끗 21장면(test·train겸용 16+세로 train전용 5)+경계 7 = 28장면. fine-tune 문턱(≥20~25) 여유 초과·도메인 다양성 확보(실 in-situ 주방·단체급식류·NIST고해상). ⚠️누수 2개(기존 oilfire_pilot/early 원본=일본 事故再現 2편) 학습 절대금지. 최종 풀·파일명 `DATA_collection_spec.md §11 "최종 풀"`.**
+> **★2026-08-25 A안 ④→⑤ ✅완료(상세=문서 최상단 블록). ④ 측정: 오염교정 후 2g recall 0.813/scene 0.846·fpr_급식실 0.260 → recall은 실데이터로 해결, 병목은 조리 헛불. FP 진단=불색음식·스팀·반사(비화염). ⑤ 급식실 조리 하드네거 재학습: held-out fpr 0.302→0.032(10×)·recall −3점(약한 흐린불 집중). 배포후보=`real_only_grouped_ck`(2ck) @ conf 0.25(recall_sc 0.815·fpr 0.032). 잔여=sc14 창백극소형불·시간축 미검증·다른 급식실 일반화.**
 > 완료: realfire 오염·Indoor 첫측정(0.20)·**실험 A(랜덤 합성0.235/실0.985)**·**누수 통제(그룹 합성0.237/실0.899)**·**도메인 이동(§C 큰불 합성0.523/실0.985 · §D 초기작은불 합성0.267/실1.000)**·**§E 헛불(하드네거130장: 실 fpr0.223/혼합0.238/그룹0.085/합성0.092)**·**§F 헛불 고치기(hardneg 재학습: grouped_hn held-out fpr 0.209→0.186·주황 0.875불변·recall유지)**·**A안 데이터 1차 수집·검수(49→9)**·미팅 문서.
 
 ## ▶ 새 세션 첫 작업 (2026-08-24 §F 헛불 고치기까지 완료 후)
