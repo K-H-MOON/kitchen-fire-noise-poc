@@ -1,5 +1,37 @@
 # HANDOFF — 다음 세션 이어가기 (2026-08-25 갱신)
 
+## ▶▶▶ 새 세션 즉시 작업 (2026-08-25 · 발표회 데모 영상 제작, 진행 중)
+
+**프로젝트 목표 = 실배포 아님, 발표회 시연**("이런 모델 만들었고 성능 이 정도"). 핵심 조사(④⑤AB+교차주방)는 완결·문서화됨 → 지금 남은 건 **데모 영상 + 결과그림 + 서사**.
+
+**어디까지 왔나(데모)**: 화재영상 후보 검수 완료 → **Kitchen Grease Fire Safety.mp4(1920×1080) 선정**, 구간 **③90–100s(발연→발화 전환·서사 1순위)·②70–80s(안정구도)**, 길이 **10초 기준**. 데모 스크립트 `colab_demo_video.py` 완성(박스+시간축 2-of-3 경보 오버레이 MP4 + `_strip.jpg` 몽타주 자동출력). **미완 = 데모 MP4 실행·확정**(런타임 끊겨 중단됨) → ③②둘다 뽑아 `_strip.jpg` 육안비교 → 최종 클립 확정 → 조리(조용함) 영상 짝지어 완성.
+
+**즉시 재현 레시피 (새 런타임 가정)**:
+```python
+# (1) 재clone (oilfire_raw 재구성 불필요 — 데모는 Drive 루트 영상 직접 읽음)
+!rm -rf /content/kitchen-fire-noise-poc && git clone -q https://github.com/K-H-MOON/kitchen-fire-noise-poc.git /content/kitchen-fire-noise-poc
+# (2) 데모 MP4 — Kitchen Grease 두 구간 (drive.mount 는 스크립트가 함)
+import os
+os.environ['DEMO_VIDEO']='/content/drive/MyDrive/Kitchen Grease Fire Safety.mp4'   # seochorobotics 계정
+os.environ['MODEL']='real_only_grouped_ck'; os.environ['FPS']='12'; os.environ['DEMO_LABEL']='real fire'
+os.environ['START']='90'; os.environ['END']='100'; os.environ['OUT_MP4']='/content/demo_grease_90_100.mp4'
+%run /content/kitchen-fire-noise-poc/scripts/colab_demo_video.py
+os.environ['START']='70'; os.environ['END']='80'; os.environ['OUT_MP4']='/content/demo_grease_70_80.mp4'
+%run /content/kitchen-fire-noise-poc/scripts/colab_demo_video.py
+# (3) _strip.jpg(첨부용) + MP4(발표용) 다운로드 → strip 육안비교로 구간 확정
+```
+- **경보 로직**: 최근 PERSIST_SEC(1.0s) 중 PERSIST_FRAC(0.5) 이상 검출 시 ALARM(= 2-of-3 정신). `FPS/PERSIST_SEC/FRAC`로 민감도 조정.
+- **화재영상은 학습 무관**(2ck=Indoor+조리네거 학습, 이 영상 미학습) → 데모 정직. **비-급식실**(소방데모)이라 "실화재 검출 시연(불꽃종류 무관)"으로 프레이밍.
+- **조리(조용함) 영상**: 한국급식실 CCTV(`조리 데이터 영상`). seen=조용(~0.2/분)·unseen=헛불(1.465/분) → seen만 vs seen+unseen 대비 정할 것.
+
+**핵심 함정(데모)**: 영상은 **seochorobotics 계정**(Colab 마운트 계정)의 MyDrive 루트에 있음(blessmoonkh=Claude 커넥터와 별개). MP4는 채팅 첨부/AI관찰 불가 → **`_strip.jpg` 몽타주로 확인**. 파일명 후보: `Kitchen Grease Fire Safety.mp4`·`How to Prevent & Douse a Kitchen Fire _ Deep-Frying.mp4`(둘 다 1080p)·`2 東京防災 天ぷら油火災実験.mp4`·`天ぷら油火災が発生するまで！（訓練）.mp4`·`天ぷら油火災シミュレーション.mp4`(720p·일본자막).
+
+**교차-주방 결론(④⑤ 이후 추가 검증, README/STATUS 반영됨)**: 28영상=13개 학교 급식실. 사이트단위 leave-out+이벤트level(헛경보/분) → **본 급식실 0.206/분 vs 안 본 급식실 1.465/분(~7×, 같은 모델 2cks). = per-site 보정 작동·범용 one-model 미해결.** 배포결론 정직화 완료. 팀 보고 = `docs/STATUS.md`(README 상단 링크).
+
+**base YOLO 팀원질문 답(기록)**: 순정 yolov8s=COCO 80클래스에 fire 없음 → 화재 recall **0**/precision N/A(구조적). baseline=합성-only(v8_C0_s1) 0.237. 단계 순정0→합성0.237→실0.899. 합성 무기여=혼합(합성+실)=실(랜덤분할 둘다 0.985·그룹 미측정).
+
+---
+
 ## ✅ A안 ④→⑤ 완료 (2026-08-25) — 배포후보 2ck @ conf 0.25
 
 **한 줄**: 실데이터로 recall 해결(0.81/0.85) → 급식실 조리 헛불(fpr)이 유일 병목 → **⑤ 급식실 조리 하드네거 재학습으로 fpr 10×↓(held-out 0.302→0.032), recall −3점(약한 흐린불에 집중)** → **배포후보 = `real_only_grouped_ck`(2ck) @ conf 0.25**(recall_sc 0.815 · fpr_급식실 0.032, ⑤ 전엔 불가능했던 "recall>0.80 & fpr<0.10" 운영점 달성).
