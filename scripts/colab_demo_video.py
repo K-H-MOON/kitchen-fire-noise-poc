@@ -94,4 +94,18 @@ first = int(np.argmax(alarm)) if alarm.any() else -1
 print(f'-> {OUT}')
 print(f'   경보 ON {int(alarm.sum())}/{len(frames)}프레임' +
       (f' · 첫 경보 {START + first / FPS:.1f}s(구간 시작 +{first / FPS:.1f}s)' if first >= 0 else ' · 경보 없음'))
-print('   빨간박스=검출·상단바 빨강=ALARM/회색=MONITORING. 다운로드해 재생 확인.')
+
+# --- 몽타주 스트립(채팅 첨부·육안 확인용 이미지) : 오버레이 프레임 균등 10장 ---
+ovf = sorted(glob.glob(f'{od}/*.jpg'))
+NP = min(10, len(ovf))
+pick = [ovf[int(round(k * (len(ovf) - 1) / max(1, NP - 1)))] for k in range(NP)]
+cols = 5; cw = 300
+im0 = Image.open(pick[0]); ch = round(cw * im0.height / im0.width)
+rows = (len(pick) + cols - 1) // cols
+sh = Image.new('RGB', (cols * cw, rows * ch), (16, 16, 16))
+for j, p in enumerate(pick):
+    sh.paste(Image.open(p).convert('RGB').resize((cw, ch)), ((j % cols) * cw, (j // cols) * ch))
+strip = OUT.rsplit('.', 1)[0] + '_strip.jpg'
+sh.save(strip, quality=88)
+print(f'   몽타주(첨부용) -> {strip}')
+print('   빨간박스=검출·상단바 빨강=ALARM/회색=MONITORING.')
