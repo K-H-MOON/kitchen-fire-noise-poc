@@ -92,6 +92,22 @@ def alarmed(flags, K, WIN):
     return False, -1
 
 
+def alarm_signal(flags, K, WIN):
+    """프레임별 경보 on/off 신호(K-of-WIN)."""
+    sig = np.zeros(len(flags), dtype=int)
+    for i in range(len(flags)):
+        if flags[max(0, i - WIN + 1):i + 1].sum() >= K:
+            sig[i] = 1
+    return sig
+
+
+def n_episodes(sig):
+    """경보 상승엣지(0→1) 개수 = 구분되는 헛경보 '발생 횟수'(길이 독립 지표용)."""
+    if len(sig) == 0:
+        return 0
+    return int((sig[0] == 1) + np.sum((sig[1:] == 1) & (sig[:-1] == 0)))
+
+
 # ---- 불 이벤트 시퀀스 (구간별) ----
 print('불 이벤트 밀집추출·추론...')
 fire_seqs = {}
@@ -125,7 +141,9 @@ GRID = [(1, 1), (2, 3), (3, 5), (4, 7), (5, 10)]
 print('\n' + '=' * 74)
 print(f'B 시간축 — 이벤트-level (model {MODEL} · STEP {STEP}s · conf {CONF})')
 print('=' * 74)
-print(f'{"규칙(K-of-N)":<14}{"불이벤트 recall":>16}{"조리 헛경보율":>14}{"지연(초,중앙)":>14}')
+cook_min_total = sum(len(s) for s in cook_seqs.values()) * STEP / 60.0
+print(f'조리 관측 총 {cook_min_total:.1f}분 ({len(cook_seqs)}영상)')
+print(f'{"규칙(K-of-N)":<13}{"불recall":>9}{"헛경보/분":>10}{"헛경보율(영상)":>15}{"지연(초)":>10}')
 rows = []
 for (K, WIN) in GRID:
     fa = [alarmed(s, K, WIN) for s in fire_seqs.values()]
@@ -133,16 +151,21 @@ for (K, WIN) in GRID:
     lats = [idx * STEP for (a, idx) in fa if a]
     lat = float(np.median(lats)) if lats else None
     cfa = float(np.mean([alarmed(s, K, WIN)[0] for s in cook_seqs.values()])) if cook_seqs else None
-    rows.append(dict(K=K, WIN=WIN, fire_event_recall=frec, cook_fa_rate=cfa, latency_med=lat))
+    cook_ep = sum(n_episodes(alarm_signal(s, K, WIN)) for s in cook_seqs.values())
+    fapm = (cook_ep / cook_min_total) if cook_min_total > 0 else None      # ★길이 독립 배포지표
+    rows.append(dict(K=K, WIN=WIN, fire_event_recall=frec, cook_fa_per_min=fapm,
+                     cook_fa_rate=cfa, cook_episodes=cook_ep, latency_med=lat))
     lc = f'{lat:.1f}' if lat is not None else '  -  '
     cc = f'{cfa:.3f}' if cfa is not None else '  -  '
-    tag = ' (=프레임단위)' if (K, WIN) == (1, 1) else ''
-    print(f'{f"{K}-of-{WIN}":<14}{frec:>16.3f}{cc:>14}{lc:>14}{tag}')
+    fm = f'{fapm:.3f}' if fapm is not None else '  -  '
+    tag = ' (=프레임)' if (K, WIN) == (1, 1) else ''
+    print(f'{f"{K}-of-{WIN}":<13}{frec:>9.3f}{fm:>10}{cc:>15}{lc:>10}{tag}')
 
-print('\n판독: K=1(프레임단위) 대비 K-of-N 이 ① 불이벤트 recall 유지/회복 ② 조리 헛경보율↓ 이면 시간축 유효.')
-print('  지연=불 구간 시작~첫 경보(초). 낮을수록 조기경보. 경계: 구간 시작=불 시작 근사·held-out N 작음·'
-      f'조리 헛경보율은 영상당 관측창 {COOK_MAXSEC:.0f}s 기준(창 길수록 헛경보 기회↑).')
+print('\n판독: 시간축 유효 = K-of-N 이 ① 불 recall 유지 ② 헛경보/분↓. ★핵심 배포지표=헛경보/분(길이 독립).')
+print(f'  헛경보/분 = 구분되는 헛경보 발생횟수(상승엣지) / 조리 관측 총 {cook_min_total:.1f}분. 헛경보율(영상)=길이민감 참고용.')
+print('  지연=불 구간 시작~첫 경보(초). 경계: 구간시작=불시작 근사·held-out N 작음·사이트 편중 가능.')
 json.dump({'model': MODEL, 'step': STEP, 'conf': CONF, 'cook_maxsec': COOK_MAXSEC,
+           'cook_min_total': cook_min_total,
            'n_fire_events': len(fire_seqs), 'n_cook': len(cook_seqs), 'grid': rows},
           open('/content/temporal_eval.json', 'w'), ensure_ascii=False, indent=1, default=float)
 print('\n-> /content/temporal_eval.json')
