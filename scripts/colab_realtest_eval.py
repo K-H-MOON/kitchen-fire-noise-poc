@@ -45,7 +45,8 @@ models = {
     '2_real_only':             f'{IFRUN}/real_only/weights/best.pt',
     '2g_real_only_grouped':    f'{IFRUN}/real_only_grouped/weights/best.pt',
     '2gh_real_only_grouped_hn': f'{IFRUN}/real_only_grouped_hn/weights/best.pt',
-    '2ck_real_only_grouped_ck': f'{IFRUN}/real_only_grouped_ck/weights/best.pt',  # ⑤ 급식실 조리 네거티브 재학습
+    '2ck_real_only_grouped_ck': f'{IFRUN}/real_only_grouped_ck/weights/best.pt',  # ⑤ 조리 네거티브(영상단위 held-out)
+    '2cks_real_only_grouped_cksite': f'{IFRUN}/real_only_grouped_cksite/weights/best.pt',  # ⑤ 사이트단위 held-out(교차-주방)
 }
 
 

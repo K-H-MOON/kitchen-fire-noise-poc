@@ -48,6 +48,7 @@ def maxconf(model, paths, base=0.01):
 models = {
     '2g_real_only_grouped':    f'{IFRUN}/real_only_grouped/weights/best.pt',
     '2ck_real_only_grouped_ck': f'{IFRUN}/real_only_grouped_ck/weights/best.pt',
+    '2cks_real_only_grouped_cksite': f'{IFRUN}/real_only_grouped_cksite/weights/best.pt',
     '2_real_only':             f'{IFRUN}/real_only/weights/best.pt',
 }
 CONFS = [0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80]
