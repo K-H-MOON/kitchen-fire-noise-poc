@@ -10,7 +10,7 @@
 # 선행: Kaggle API 토큰 필요 — https://www.kaggle.com/settings → 'Create New Token' → kaggle.json.
 #   Colab 에 업로드(/content/kaggle.json) 하거나 os.environ['KAGGLE_USERNAME']·['KAGGLE_KEY'] 설정.
 #
-# env(선택): DFIRE_CAP(총 이미지 상한·fire양성 우선, 기본 8000; 0=전체 21k) · OUT_DIR(기본 /content/dfire_fireonly)
+# env(선택): DFIRE_CAP(총 이미지 상한·fire양성 우선, 기본 8000; 0=전체 21k) · DFIRE_OUT(기본 /content/dfire_fireonly)
 #   KAGGLE_SLUG(기본 sayedgamal99/smoke-fire-detection-yolo)
 #
 # 산출: {OUT_DIR}/images/*.jpg (심링크) · {OUT_DIR}/labels/*.txt (fire=0 만, 없으면 빈=음성)
@@ -18,7 +18,7 @@
 import os, glob, shutil, subprocess, sys, random
 
 CAP  = int(os.environ.get('DFIRE_CAP', '8000'))
-OUT  = os.environ.get('OUT_DIR', '/content/dfire_fireonly')
+OUT  = os.environ.get('DFIRE_OUT', '/content/dfire_fireonly')   # ★ OUT_DIR 아님(테스트셋 경로와 충돌 방지)
 SLUG = os.environ.get('KAGGLE_SLUG', 'sayedgamal99/smoke-fire-detection-yolo')
 RAW  = '/content/dfire_raw'
 
