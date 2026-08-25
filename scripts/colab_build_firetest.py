@@ -30,10 +30,11 @@ except Exception:
 
 DRIVE = '/content/drive/MyDrive'
 FIRE  = f'{DRIVE}/fire_frames'
-RAW   = f'{FIRE}/oilfire_raw'
-COOK  = f'{DRIVE}/조리 데이터 영상'          # 급식실 조리 CCTV(불 없음 → 배포-대표 음성)
-OUT   = f'{FIRE}/oilfire_realtest'
-INSP  = f'{FIRE}/inspect'
+# 작업 폴더는 env 로 재지정 가능(Drive 쓰기 유실 회피 → 로컬 /content 권장). 소스는 Drive 에서 읽음.
+RAW   = os.environ.get('RAW_DIR', f'{FIRE}/oilfire_raw')     # 화재영상 소스
+COOK  = os.environ.get('COOK_DIR', f'{DRIVE}/조리 데이터 영상')  # 급식실 조리 CCTV(음성)
+OUT   = os.environ.get('OUT_DIR', f'{FIRE}/oilfire_realtest')  # test 출력
+INSP  = os.environ.get('INSP_DIR', f'{FIRE}/inspect')         # 몽타주 출력
 FIRE_STEP = float(os.environ.get('FIRE_STEP', '1.0'))
 COOK_STEP = float(os.environ.get('COOK_STEP', '6'))
 COOK_CAP  = int(os.environ.get('COOK_CAP', '8'))
@@ -170,10 +171,10 @@ else:
 json.dump({'accepted': manifest, 'ranges': {k: v for k, v in RANGES.items()},
            'n_fire': n_fire, 'n_nofire_kitchen': n_cook, 'n_nofire_presrc': n_pre,
            'fire_step': FIRE_STEP},
-          open(f'{FIRE}/realtest_manifest.json', 'w'), ensure_ascii=False, indent=1)
+          open(f'{OUT}/realtest_manifest.json', 'w'), ensure_ascii=False, indent=1)
 
 print(f'\ntest 구성 완료 -> {OUT}')
 print(f'  fire(양성) {n_fire} · nofire_kitchen(급식실조리) {n_cook} · nofire_presrc(발화전) {n_pre}')
-print(f'  manifest {FIRE}/realtest_manifest.json')
+print(f'  manifest {OUT}/realtest_manifest.json')
 print('  다음: %run scripts/colab_realtest_eval.py 로 현재 모델 측정.')
 print('  ⚠ 양성은 사람이 지정한 불 구간 기반(모델 독립) · 음성 조리CCTV는 불 없음 확인된 정상 조리.')

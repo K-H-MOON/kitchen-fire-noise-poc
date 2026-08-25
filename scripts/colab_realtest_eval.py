@@ -20,8 +20,8 @@ except ImportError:
 FIRE  = '/content/drive/MyDrive/fire_frames'
 RUNS  = f'{FIRE}/runs_phaseB'
 IFRUN = f'{FIRE}/runs_if'
-TEST  = f'{FIRE}/oilfire_realtest'
-OUT   = f'{FIRE}/indoorfire_eval'
+TEST  = os.environ.get('OUT_DIR', f'{FIRE}/oilfire_realtest')   # build 와 동일 경로(로컬 가능)
+OUT   = os.environ.get('EVAL_OUT', f'{FIRE}/indoorfire_eval')   # 결과 json(작은 1파일)
 CONF  = float(os.environ.get('CONF', '0.25'))
 
 drive.mount('/content/drive')
