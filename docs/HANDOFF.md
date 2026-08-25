@@ -38,15 +38,21 @@ RANGES = {
 %run -i /content/kitchen-fire-noise-poc/scripts/colab_build_firetest.py
 # → fire(양성)~548 · nofire_kitchen(급식실조리 CCTV)~181 · nofire_presrc(발화전)~291
 
+# (2b) 양성 프레임 육안 검증 — 불 아닌 프레임 혼입 확인(측정 전 필수)
+os.environ['OUT_DIR']='/content/oilfire_realtest'; os.environ['INSP_DIR']='/content/inspect'
+%run /content/kitchen-fire-noise-poc/scripts/colab_inspect_firetest_pos.py
+# → /content/inspect/firetest_pos_<sc##>.jpg 를 채팅에 첨부해 확인.
+#    비화염 많이 섞인 장면은 그 RANGES 만 좁혀 (2)부터 재실행. 거의 다 불이면 통과 → (3).
+
 # (3) 측정
 os.environ['OUT_DIR']='/content/oilfire_realtest'; os.environ['EVAL_OUT']='/content'
 %run /content/kitchen-fire-noise-poc/scripts/colab_realtest_eval.py
 ```
-**미완(먼저 할 것)**: **셀 2b = 양성 프레임 검증** — RANGES가 ±4s 근사라 불 아닌 프레임 혼입 가능(→recall 과소평가). 측정 전 `/content/oilfire_realtest/fire/*.jpg` 몽타주로 눈확인, 비화염 많이 섞인 장면은 그 RANGES만 좁혀 재빌드. (누수·중복·불꽃가림 오염은 확인 완료·자유로움. 남은 유일 리스크가 이 양성 혼입.)
+**셀 2b = 양성 프레임 검증** (스크립트 `colab_inspect_firetest_pos.py` · 위 레시피 (2b)에 편입 완료): RANGES가 ±4s 근사라 불 아닌 프레임 혼입 가능(→recall 과소평가). 측정 전 `/content/oilfire_realtest/fire/*.jpg` 장면별 몽타주로 눈확인, 비화염 많이 섞인 장면은 그 RANGES만 좁혀 재빌드. (누수·중복·불꽃가림 오염은 확인 완료·자유로움. 남은 유일 리스크가 이 양성 혼입.)
 
 **판정 기준(④)**: `2g_real_only_grouped`(배포후보)의 **recall↑ & fpr_kitchen↓**이면 **fine-tune 불요 가능**(현재 모델 이미 쓸 만). 낮으면 ⑤ fine-tune 근거. recall은 양성만·fpr은 음성만 **분리 보고**(소스 스타일 혼입 상쇄). 경계: frame-level(위치 무시·관대)·장면 N 작음(CI 큼)·저해상 다수·급식실 근접(실 급식실 아님).
 
-**스크립트**: `colab_build_firetest.py`(RAW_DIR/OUT_DIR/INSP_DIR env·2모드[RANGES 없으면 몽타주, 있으면 빌드]) · `colab_realtest_eval.py`(OUT_DIR/EVAL_OUT env). 채택 16 선정기준·최종풀 = `DATA_collection_spec.md §11`.
+**스크립트**: `colab_build_firetest.py`(RAW_DIR/OUT_DIR/INSP_DIR env·2모드[RANGES 없으면 몽타주, 있으면 빌드]) · `colab_inspect_firetest_pos.py`(OUT_DIR/INSP_DIR env·빌드된 양성 장면별 몽타주=셀 2b) · `colab_realtest_eval.py`(OUT_DIR/EVAL_OUT env). 채택 16 선정기준·최종풀 = `DATA_collection_spec.md §11`.
 
 
 > **v1·v2·v3 모두 실제 전이 약함(불꽃·표현 레버 아님) → 병목 = 데이터/도메인.** 회의 후 = **실제 데이터로 공략** → **실험 A: 실데이터 학습이 놓침 해소**(Indoor recall 0.235→0.985). **누수 통제 0.899로 견고**(누수 ~8.6점). **도메인 이동 파일럿: 유류화재 test 큰불(§C) 실 0.985·초기작은불(§D) 실 0.97~1.0 vs 합성 0.52·0.27 → 실데이터가 유류화재 큰불·초기불 모두에 전이**(누수 원천 불가 독립 test). §AFTER_meeting §5·§6.
