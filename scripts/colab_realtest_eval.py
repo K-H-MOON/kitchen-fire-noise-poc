@@ -47,6 +47,7 @@ models = {
     '2gh_real_only_grouped_hn': f'{IFRUN}/real_only_grouped_hn/weights/best.pt',
     '2ck_real_only_grouped_ck': f'{IFRUN}/real_only_grouped_ck/weights/best.pt',  # ⑤ 조리 네거티브(영상단위 held-out)
     '2cks_real_only_grouped_cksite': f'{IFRUN}/real_only_grouped_cksite/weights/best.pt',  # ⑤ 사이트단위 held-out(교차-주방)
+    '2df_real_only_grouped_df': f'{IFRUN}/real_only_grouped_df/weights/best.pt',  # D-Fire 실데이터 보강(배찬우 제안)
 }
 
 

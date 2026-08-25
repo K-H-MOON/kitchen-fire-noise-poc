@@ -62,7 +62,8 @@ SYN_TRAIN  = f'{FIRE}/synth_{SYN_COND}/train'
 HARDNEG    = os.environ.get('HARDNEG', '0') == '1'      # 하드네거 주입(헛불 고치기) → 모델명 _<HN_TAG>
 HN_TRAIN   = os.environ.get('HARDNEG_TRAIN_DIR', f'{FIRE}/oilfire_hardneg_train/nofire')
 HN_TAG     = os.environ.get('HN_TAG', 'hn')             # 접미사(§F=hn · 급식실조리=ck 등, 모델 덮어쓰기 방지)
-SUF        = f'_{HN_TAG}' if HARDNEG else ''
+DFIRE_DIR  = os.environ.get('DFIRE_DIR', '')            # D-Fire 실데이터 주입(배찬우 제안 보강) → 모델명 _df. '' = 미사용
+SUF        = ('_df' if DFIRE_DIR else '') + (f'_{HN_TAG}' if HARDNEG else '')
 
 os.makedirs(OUT, exist_ok=True)
 if not os.path.isdir(RAW) or not os.listdir(RAW):
@@ -244,6 +245,24 @@ if HARDNEG:
         open(f'{NEW}/train/labels/{os.path.splitext(name)[0]}.txt', 'w').close()   # 0바이트 = 음성
         hn += 1
     print(f'[HARDNEG] 하드네거 {hn}장 그룹-train 주입 (mixed 도 상속)')
+
+# D-Fire 실데이터 주입(opt-in): 배찬우 제안 실데이터로 fire recall 커버리지 보강.
+#   fire 라벨(=class0) 있는 이미지=양성(라벨 복사)·smoke/neither=음성(빈 라벨). 그룹-train 에만(valid/test 불변).
+#   D-Fire 는 colab_fetch_dfire.py 로 fire-only 변환된 DFIRE_DIR(images/·labels/) 사용.
+if DFIRE_DIR:
+    dfp = dfn = 0
+    for p in sorted(glob.glob(f'{DFIRE_DIR}/images/*')):
+        name = 'df_' + os.path.basename(p)
+        stem = os.path.splitext(name)[0]
+        dst = f'{NEW}/train/images/{name}'
+        if not os.path.exists(dst):
+            os.symlink(os.path.realpath(p), dst)
+        lp = f'{DFIRE_DIR}/labels/{os.path.splitext(os.path.basename(p))[0]}.txt'
+        lines = open(lp).readlines() if os.path.exists(lp) else []
+        open(f'{NEW}/train/labels/{stem}.txt', 'w').writelines(lines)
+        dfp += 1 if lines else 0
+        dfn += 0 if lines else 1
+    print(f'[DFIRE] D-Fire {dfp+dfn}장 그룹-train 주입 (양성 {dfp}·음성 {dfn})')
 
 # ---------------------------------------------------------------------------
 # 재학습
