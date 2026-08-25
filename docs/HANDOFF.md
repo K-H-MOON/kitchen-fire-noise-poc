@@ -1,4 +1,53 @@
-# HANDOFF — 다음 세션 이어가기 (2026-08-24 갱신)
+# HANDOFF — 다음 세션 이어가기 (2026-08-25 갱신)
+
+## ▶▶▶ 새 세션 즉시 작업 (2026-08-25 · A안 ④ 현재모델 측정, 진행 중)
+
+**어디까지 왔나**: A안 데이터 수집 종료(28장면) → 지금 **frame-level 실화재 test 만들어 현재 모델 재측정**(A안 ④) 단계. test 빌더·측정 스크립트 완성, 이번 세션에 test까지 빌드했으나 **`/content`(로컬)에 있어 세션 종료로 소실 → 새 세션에서 재빌드~측정 통째로 진행.**
+
+**⚠️ 중대 함정 3개(꼭 지킬 것)**:
+1. **Drive `oilfire_raw` 반복 유실**(Colab+Drive FUSE 비동기 쓰기 손실 추정) → **작업본은 로컬 `/content`에서.** 소스 영상은 Drive 루트에서 읽어 로컬로 복사(루트 85 mp4는 안정). 모델·평가결과 등 기존 산출물은 Drive에 멀쩡.
+2. **`/content`는 세션 리셋 시 소멸** → **rebuild→build→measure를 한 세션에 연속** 실행.
+3. **`%run -i` 필수**(그냥 `%run` 아님) — `%run`은 새 네임스페이스라 셀에서 정의한 `RANGES`(파이썬 변수)를 못 봄. `-i`라야 보임. (env는 프로세스전역이라 `%run`도 됨.)
+
+**전체 재현 레시피 (한 세션, 순서대로)**:
+```python
+# (1) 재clone + 로컬 oilfire_raw 재구성(루트 화재영상 복사 + NIST 다운로드)
+!rm -rf /content/kitchen-fire-noise-poc && git clone -q https://github.com/K-H-MOON/kitchen-fire-noise-poc.git /content/kitchen-fire-noise-poc
+from google.colab import drive; drive.mount('/content/drive')
+import os, glob, re, shutil
+ROOT='/content/drive/MyDrive'; L='/content/oilfire_raw'; os.makedirs(L, exist_ok=True)
+stock=re.compile(r'(istockphoto|watermarked|-hd_|-uhd_|_\d{3,4}_\d{3,4}_\d+fps|^267-)')
+for p in glob.glob(f'{ROOT}/*.mp4'):
+    b=os.path.basename(p)
+    if not stock.search(b) and '360___Video' not in b and '(1)' not in b:
+        shutil.copy(p, f'{L}/{b}')
+os.system('pip -q install -U yt-dlp')
+for u in ['https://www.nist.gov/video/cooktop-reignition-oil','https://www.nist.gov/video/cooktop-ignition-prevention-technology-evaluation-ignition-not-prevented']:
+    os.system(f'yt-dlp -o "{L}/NIST_%(title)s.%(ext)s" "{u}"')
+print('local oilfire_raw:', len(os.listdir(L)))   # ~68
+
+# (2) test 빌드 — RANGES + %run -i (아래 RANGES 는 확정본, 몽타주±4s 근사)
+os.environ['RAW_DIR']='/content/oilfire_raw'; os.environ['OUT_DIR']='/content/oilfire_realtest'
+RANGES = {
+    'How to Prevent':[(155,172)], 'Chip pan':[(13,15),(21,25),(29,32)], 'Cooking Fire Safety':[(9,22)],
+    'Kitchen Grease Fire Safety':[(30,32),(46,86)], '2 東京防災':[(91,138),(147,151)], 'IHこんろ「4':[(7,10),(59,63)],
+    '発生':[(185,256)], 'シミュレーション':[(33,36),(55,85)], '恐怖':[(11,13),(40,62)], '1637681405':[(11,21)],
+    '401469436':[(3,27)], '774563476':[(3,22)], '32125355803':[(9,42)], '34938882503':[(7,24)],
+    'NIST_Cooktop Reignition':[(24,136),(150,162)], 'NIST_Cooktop ignition':[(9,39)],
+}
+%run -i /content/kitchen-fire-noise-poc/scripts/colab_build_firetest.py
+# → fire(양성)~548 · nofire_kitchen(급식실조리 CCTV)~181 · nofire_presrc(발화전)~291
+
+# (3) 측정
+os.environ['OUT_DIR']='/content/oilfire_realtest'; os.environ['EVAL_OUT']='/content'
+%run /content/kitchen-fire-noise-poc/scripts/colab_realtest_eval.py
+```
+**미완(먼저 할 것)**: **셀 2b = 양성 프레임 검증** — RANGES가 ±4s 근사라 불 아닌 프레임 혼입 가능(→recall 과소평가). 측정 전 `/content/oilfire_realtest/fire/*.jpg` 몽타주로 눈확인, 비화염 많이 섞인 장면은 그 RANGES만 좁혀 재빌드. (누수·중복·불꽃가림 오염은 확인 완료·자유로움. 남은 유일 리스크가 이 양성 혼입.)
+
+**판정 기준(④)**: `2g_real_only_grouped`(배포후보)의 **recall↑ & fpr_kitchen↓**이면 **fine-tune 불요 가능**(현재 모델 이미 쓸 만). 낮으면 ⑤ fine-tune 근거. recall은 양성만·fpr은 음성만 **분리 보고**(소스 스타일 혼입 상쇄). 경계: frame-level(위치 무시·관대)·장면 N 작음(CI 큼)·저해상 다수·급식실 근접(실 급식실 아님).
+
+**스크립트**: `colab_build_firetest.py`(RAW_DIR/OUT_DIR/INSP_DIR env·2모드[RANGES 없으면 몽타주, 있으면 빌드]) · `colab_realtest_eval.py`(OUT_DIR/EVAL_OUT env). 채택 16 선정기준·최종풀 = `DATA_collection_spec.md §11`.
+
 
 > **v1·v2·v3 모두 실제 전이 약함(불꽃·표현 레버 아님) → 병목 = 데이터/도메인.** 회의 후 = **실제 데이터로 공략** → **실험 A: 실데이터 학습이 놓침 해소**(Indoor recall 0.235→0.985). **누수 통제 0.899로 견고**(누수 ~8.6점). **도메인 이동 파일럿: 유류화재 test 큰불(§C) 실 0.985·초기작은불(§D) 실 0.97~1.0 vs 합성 0.52·0.27 → 실데이터가 유류화재 큰불·초기불 모두에 전이**(누수 원천 불가 독립 test). §AFTER_meeting §5·§6.
 > **★2026-08-24 §F 헛불 고치기(하드네거 재학습) 완료 = 사실상 무효. 주황조명(13476222)이 모든 실모델에서 fpr 0.875~1.0로 요지부동 = "주황조명 FP는 데이터 문제" 확정(1장면뿐 유형은 일반화 못 함, 실증). 스팀은 이미 그룹모델이 해결. 다음 진짜 레버 = 주황 하드네거 장면 다수 수집. 상세 §F.**
