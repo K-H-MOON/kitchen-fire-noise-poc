@@ -116,6 +116,10 @@ else:
 
 # --- fire-only 디렉터리 작성(심링크 + 라벨) ---
 if os.path.isdir(OUT):
+    # 안전장치: 출력 경로가 테스트셋 등 남의 데이터로 보이면 삭제 거부(오염 방지)
+    if any(os.path.isdir(f'{OUT}/{d}') for d in ('fire', 'nofire_kitchen', 'nofire_presrc')):
+        print(f'⚠️ {OUT} 가 테스트셋으로 보임(fire/·nofire_* 존재) — 삭제 거부. DFIRE_OUT를 다른 경로로 지정하세요.')
+        raise SystemExit(1)
     shutil.rmtree(OUT)
 os.makedirs(f'{OUT}/images', exist_ok=True); os.makedirs(f'{OUT}/labels', exist_ok=True)
 for i, (p, lines) in enumerate(keep):
