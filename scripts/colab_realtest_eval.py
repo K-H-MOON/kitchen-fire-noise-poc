@@ -25,6 +25,10 @@ OUT   = os.environ.get('EVAL_OUT', f'{FIRE}/indoorfire_eval')   # 결과 json(�
 CONF  = float(os.environ.get('CONF', '0.25'))
 # 급식실(조리) 음성 경로 override: ⑤ 재학습 후 held-out 조리영상으로만 fpr 측정(누수 차단).
 COOK_TEST_DIR = os.environ.get('COOK_TEST_DIR', f'{TEST}/nofire_kitchen')
+# 배찬우 팀원 검수 반영(2026-08-26): recall clean/all 이중집계 · presrc 오라벨 장면 제외.
+#   기본 빈값 → 기존 동작 불변. 제외 기준=불 가리는 비-배포 아티팩트만(체리피킹 금지).
+COMPROMISED = {s for s in os.environ.get('COMPROMISED_SCENES', '').split(',') if s}
+PRESRC_DROP = {s for s in os.environ.get('PRESRC_DROP', '').split(',') if s}
 
 drive.mount('/content/drive')
 os.makedirs(OUT, exist_ok=True)
@@ -38,6 +42,13 @@ print(f'test: fire {len(fire_imgs)} · nofire_kitchen {len(cook_imgs)} · nofire
 
 def source(p):
     return os.path.basename(p).rsplit('_', 1)[0]
+
+
+# presrc 오라벨(불) 장면 제외 — 파일 삭제 아님, 이 실행에서만 fpr_발화전 계산서 빼는 필터.
+if PRESRC_DROP:
+    _n0 = len(pre_imgs)
+    pre_imgs = [p for p in pre_imgs if source(p) not in PRESRC_DROP]
+    print(f'[PRESRC_DROP] {sorted(PRESRC_DROP)} 제외(오라벨) → nofire_presrc {_n0} → {len(pre_imgs)}')
 
 
 models = {
@@ -80,7 +91,10 @@ for key, best in models.items():
     scene_rec = by_source_rate(fire_imgs, fdet)
     sc_mean = float(np.mean(list(scene_rec.values()))) if scene_rec else 0.0
     sc_std  = float(np.std(list(scene_rec.values()))) if scene_rec else 0.0
+    clean_rec = {s: v for s, v in scene_rec.items() if s not in COMPROMISED}   # 이중집계: compromised 제외
+    sc_mean_clean = float(np.mean(list(clean_rec.values()))) if clean_rec else 0.0
     rows[key] = dict(recall=recall, scene_mean=sc_mean, scene_std=sc_std, n_scene=len(scene_rec),
+                     scene_mean_clean=sc_mean_clean, n_scene_clean=len(clean_rec),
                      fpr_kitchen=fpr_cook, fpr_presrc=fpr_pre,
                      scene_recall=scene_rec,
                      fpr_kitchen_by_src=by_source_rate(cook_imgs, cdet) if cdet else {})
@@ -94,6 +108,14 @@ for k, r in rows.items():
     fp = f'{r["fpr_presrc"]:.3f}' if r["fpr_presrc"] is not None else '  -  '
     print(f'{k:<28}{r["recall"]:>8.3f}{r["scene_mean"]:>11.3f}±{r["scene_std"]:.3f}{fk:>11}{fp:>11}')
 
+if COMPROMISED:
+    print(f'\n[이중집계] compromised 장면 제외({sorted(COMPROMISED)}) → clean-only 대비:')
+    print(f'{"모델":<28}{"scene_all":>11}{"scene_clean":>13}{"Δ":>8}')
+    for k, r in rows.items():
+        d = r["scene_mean_clean"] - r["scene_mean"]
+        print(f'{k:<28}{r["scene_mean"]:>11.3f}{r["scene_mean_clean"]:>13.3f}{d:>+8.3f}')
+    print('  기준: 제외는 "불을 가리는 비-배포 아티팩트"만(체리피킹 금지). Δ 작으면 "recall 낮음=테스트탓" 반증.')
+
 print(f'\n장면별 recall (유효 N=장면수):')
 for k, r in rows.items():
     print(f'  {k}  (N={r["n_scene"]})')
@@ -105,6 +127,7 @@ print('경계: frame-level(위치 무시·관대) · 장면 N 작음(CI 큼) · 
 print('판정: 현재 모델(2g)이 이미 recall 높고 fpr_급식실 낮으면 → fine-tune 불요 가능. 낮으면 → ⑤ fine-tune 근거.')
 
 json.dump({'conf': CONF, 'n_fire': len(fire_imgs), 'n_cook': len(cook_imgs), 'n_pre': len(pre_imgs),
+           'compromised_scenes': sorted(COMPROMISED), 'presrc_drop': sorted(PRESRC_DROP),
            'rows': rows}, open(f'{OUT}/oilfire_realtest_eval.json', 'w'),
           ensure_ascii=False, indent=1, default=float)
 print(f'\n-> {OUT}/oilfire_realtest_eval.json')
