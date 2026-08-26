@@ -22,6 +22,55 @@
 
 ---
 
+## ★ 필드 템플릿 (권장 · 슬롯 채워넣기)
+
+아래 p01~p10은 고정 예시고, **실제로는 이 템플릿의 대괄호 슬롯만 매번 바꿔** 생성하는 게 낫다(다양성 관리 쉬움). **대괄호 = 변주, 나머지 = 고정(도메인 앵커).**
+
+```
+Photorealistic CCTV surveillance still, [CAMERA], [FRAMING] of [KITCHEN + BACKGROUND], [VESSEL] with cooking oil on fire — [FIRE]. [LIGHTING]. Grainy, noisy, low-resolution, compression artifacts, small white timestamp "[TIME]" in a corner, no people. Mundane surveillance footage, not cinematic. Avoid: cinematic or dramatic lighting, DSLR sharpness, professional food photography, illustration, cartoon, people.
+```
+
+**고정(절대 안 바꿈)** = `Photorealistic CCTV surveillance still` … `Grainy, noisy, low-resolution, compression artifacts` … `no people. Mundane surveillance footage, not cinematic. Avoid: …` → 도메인 매칭 상수. CCTV/grainy 톤·유류불 판별 문구는 **다양화하지 않는다**.
+
+### 슬롯 메뉴
+
+| 슬롯 | 옵션 |
+|---|---|
+| **[CAMERA]** | `wide fisheye view from a ceiling corner` · `standard non-fisheye ceiling camera looking down` · `high side angle from a wall-mounted camera` · `overhead camera looking straight down` · `eye-level camera across the kitchen line` |
+| **[FRAMING]** | `a wide view`(주방 전체) · `a medium-close view`(스토브 하나 — 불 커지고 다양성↑) |
+| **[KITCHEN]** | `an industrial school cafeteria kitchen` · `an institutional hospital kitchen` · `a large catering canteen kitchen` · `a commercial restaurant kitchen` · `a hospital kitchen with an industrial robotic cooking arm`(⑦ 배포근접) |
+| **[BACKGROUND]** ⓝ | 아래 "[BACKGROUND] 메뉴" — [KITCHEN] 뒤에 붙여 배경 다양화 |
+| **[VESSEL]** | `a large stainless steel wok on a gas range` · `a stainless steel deep fryer` · `a large stainless steel stockpot on a range` · `a frying pan with food` |
+| **[FIRE]** ⚖️ | **소형40%**: `a small but clearly visible oil fire, low orange flames on the oil surface with thin smoke`(웍·팬: `at the oil surface` / 솥: `along the rim` / 튀김기: `around the fryer basket`) · **중간40%**: `an uncontrolled oil/grease fire, medium orange-yellow flames rising from the oil surface with smoke` · **큰불20%**: `a large uncontrolled grease fire, tall orange flames and dark smoke rising from the pan` |
+| **[LIGHTING]** | `Cool white fluorescent lighting` · `Warm tungsten-tinted lighting` · `Bright daylight through windows` · `Dim low light at night` |
+| **[TIME]** | `2023-11-02 20:14:08` — **매번 날짜·시각 바꾸기**(near-dupe 방지) |
+
+### ⓝ [BACKGROUND] 메뉴 — **배포 도메인(상업/급식 주방) 안에서만**
+
+> ⚠️ 우리 핵심 교훈 = 도메인 매칭. 배경 다양화는 **상업/급식 주방 계열 안에서만.** 가정집·야외·산업용광로로 나가면 도메인 매칭이 깨져 역효과(공개모델·D-Fire 실패 방향). 스테인리스가 "똑같아" 보여도 그게 배포 도메인이다 — 아래 축으로 **계열 안에서** 변주.
+
+- **벽/바닥 재질**: `white subway-tiled walls and a worn tiled floor` · `pale green ceramic-tiled walls and a wet concrete floor` · `stainless steel wall panels with a grated floor drain` · `painted concrete block walls` · `cream-colored tiled walls`
+- **연식/청결(가장 큰 시각 레버)**: `an older, worn kitchen with stained walls and grease marks` · `a newer, clean kitchen with a polished floor`
+- **규모/배치**: `a large canteen with rows of equipment` · `a compact, cluttered kitchen with wall shelves full of pots and utensils` · `a spacious, mostly empty prep kitchen`
+- **지역/스타일**: `an Asian-style kitchen with a row of wok burners` · `a sterile hospital kitchen with white walls`
+
+### 완성 예시 (템플릿 적용)
+
+**중간 · 웍 · 직선천장 · 낡은 초록타일:**
+```
+Photorealistic CCTV surveillance still, standard non-fisheye ceiling camera looking down, a medium-close view of an institutional catering kitchen with pale green ceramic-tiled walls and a wet concrete floor, aged and grimy with grease marks, a large stainless steel wok with cooking oil on fire — an uncontrolled oil/grease fire, medium orange-yellow flames rising from the oil surface with smoke. Cool white fluorescent lighting. Grainy, noisy, low-resolution, compression artifacts, small white timestamp "2023-11-15 18:32:10" in a corner, no people. Mundane surveillance footage, not cinematic. Avoid: cinematic or dramatic lighting, DSLR sharpness, professional food photography, illustration, cartoon, people.
+```
+
+**소형 · 솥 · 어안 · 흰 서브웨이타일 어수선한 소형주방:**
+```
+Photorealistic CCTV surveillance still, wide fisheye view from a ceiling corner, a wide view of a commercial restaurant kitchen with white subway-tiled walls, compact and cluttered with wall-mounted shelves full of pots and utensils, a large stainless steel stockpot with cooking oil on fire — a small but clearly visible oil fire, low orange flames along the rim with thin smoke. Warm tungsten-tinted lighting. Grainy, noisy, low-resolution, compression artifacts, small white timestamp "2024-03-06 21:10:55" in a corner, no people. Mundane surveillance footage, not cinematic. Avoid: cinematic or dramatic lighting, DSLR sharpness, professional food photography, illustration, cartoon, people.
+```
+
+### 1×2 그리드로 뽑을 때
+[CAMERA] 뒤에 `shown as two separate camera views side by side` 추가. 한 패널만 불 있어도 됨(나머지=하드네거). 저장 후 [`slice_grid.py`](../scripts/slice_grid.py)로 슬라이스 → 개별 패널 라벨링.
+
+---
+
 ## p01 — 학교급식실 · 웍 · 중간불 · 천장 하향
 
 ```
