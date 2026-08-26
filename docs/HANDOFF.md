@@ -16,7 +16,13 @@
 - **sobelb**(B→엣지·~recall-matched): recall 0.825≈2g 0.813인데 **fpr_급식실 0.541 = 2g 0.260의 2× 악화** → 명확한 악화·가설 반대. sc14 0.175→0.025.
 - **blend**(색 전부보존+엣지 α0.4): **가장 민감한 운영점** — sc14 0.175→**0.500**(전 모델 최고)도 fpr_급식실 0.525(2× 악화)도 **같이 오른 한 현상**(민감도↑·별개 이점 아님). recall 0.875↑·scene std 0.126(균일). recall 안 맞아(0.875 vs 0.813) sc14·fpr 직접비교 불가 → **conf-match(conf sweep) 필요·미확정.**
 - **공통(주 근거=sobelb)**: recall-matched sobelb가 fpr 2× = 엣지가 fpr↑. 색 보존 blend도 fpr 높아 "색 손실 유일원인" 반증이나 blend는 운영점 교란이라 약한 보강. 색 보존은 recall엔 도움(blend 0.875>sobelb 0.825). 과적합 없음(둘 다 val mAP 우상향[노이즈]·best=ep60·꺾임 없음).
-- §6.3 #3·§2 지도·§6.2·한줄 기록 완료. **다음 선택지: (a) blend conf sweep로 확정(confsweep에 EDGE_MODE 추가 필요, 미구현) · (b) edgegray로 스펙트럼 완성 · (c) #3 종료하고 #6(생성형)으로.** (아래는 실행 전 원설계 참고)
+- §6.3 #3·§2 지도·§6.2·한줄 기록 완료.
+- **★진행 결정 = (a) conf sweep → (d) grayscale → (c) #6** (사용자 승인 2026-08-27). 도구 ✅완성:
+  - confsweep에 `EDGE_MODE` 추가(realtest_eval 동일 패턴·같은 `{TEST}_edge_<mode>` 캐시 재사용)
+  - edge_preproc에 **`gray` 모드** 추가 = 색(hue)만 제거·밝기/텍스처 보존 = **#3 원 가설(색이 조리 fpr 원인?) 대조군**(edgegray=엣지-only와 구분).
+  - **(a)**: blend/sobelb를 recall-matched로 2g와 비교(2g는 EDGE 미설정 confsweep, 엣지는 EDGE_MODE=blend/sobelb) → 같은 recall_scene 지점 fpr 비교. blend가 낮으면 win(단 1-seed·다중비교라 "유망"까지).
+  - **(d)**: EDGE_MODE=gray 로 split_audit 학습→eval(2edge_gray)→confsweep. 조리 fpr 내리면 색이 주범·유지되면 밝기/구조가 주범.
+  - **재현 레시피 아래 "#3 (a)(d) 재현".**
 
 **(원설계·완료) #3 엣지/소벨 스크립트(2026-08-27):**
 - 신규 [`edge_preproc.py`](../scripts/edge_preproc.py) = **학습·평가 공유 단일 소스**(변환 드리프트=실험 오염 방지). 3ch 유지·4ch 수술 회피. 3모드(env `EDGE_MODE`):
@@ -64,6 +70,36 @@ os.environ['EDGE_MODE']=''
 ```
 - **판정 기준**: sobelb 가 2g 대비 **fpr_급식실↓ & scene recall 유지**면 색-헛불 가설 지지(→ edge+ck 후속). recall 만 떨어지면 "색 빼면 불색 정의 손실" 실증(map 에 ❌ 기록). blend/edgegray 로 스펙트럼 완성.
 - gain/alpha 튜닝 시 `/content/oilfire_realtest_edge_<mode>` 캐시폴더 삭제 후 (3) 재실행.
+
+### #3 (a)(d) 재현 (한 세션·순서대로 · L4)
+
+```python
+# (0) 재clone (최신: gray 모드 + confsweep EDGE)
+!rm -rf /content/kitchen-fire-noise-poc && git clone -q https://github.com/K-H-MOON/kitchen-fire-noise-poc.git /content/kitchen-fire-noise-poc
+import os
+# (1) oilfire_realtest 없으면 재빌드 (위 "A안 재현" (1)(2) 셀). 이번 세션에 있으면 생략.
+os.environ['OUT_DIR']='/content/oilfire_realtest'; os.environ['EVAL_OUT']='/content'
+
+# ===== (a) 엣지 conf sweep: blend·sobelb vs 2g (recall-matched) =====
+os.environ['EDGE_MODE']=''                                                   # (a-1) RGB 곡선(2g/2ck…)
+%run /content/kitchen-fire-noise-poc/scripts/colab_realtest_confsweep.py     # → confsweep.json
+os.environ['EDGE_MODE']='blend'; os.environ['EDGE_GAIN']='0.5'; os.environ['EDGE_ALPHA']='0.4'
+%run /content/kitchen-fire-noise-poc/scripts/colab_realtest_confsweep.py     # → confsweep_edge_blend.json
+os.environ['EDGE_MODE']='sobelb'
+%run /content/kitchen-fire-noise-poc/scripts/colab_realtest_confsweep.py     # → confsweep_edge_sobelb.json
+# 비교: 각 표에서 recall_scene≈0.846(2g conf0.25 지점) 근처 conf 의 fpr_급식실을 나란히. 엣지<2g면 win(유망).
+
+# ===== (d) grayscale 색-대조군 =====
+for k in ('HARDNEG','DFIRE_DIR','BASE_TAG','BASE_YOLO'): os.environ.pop(k, None)
+os.environ['EVAL_MIXED']='0'; os.environ['EDGE_MODE']='gray'
+%run /content/kitchen-fire-noise-poc/scripts/colab_indoorfire_split_audit.py # (d-1) 학습~40분 → real_only_grouped_edge_gray + 과적합 리포트
+os.environ['OUT_DIR']='/content/oilfire_realtest'; os.environ['EVAL_OUT']='/content'; os.environ['EDGE_MODE']='gray'
+%run /content/kitchen-fire-noise-poc/scripts/colab_realtest_eval.py          # (d-2) 2edge_gray: fpr_급식실 vs 2g 0.260
+%run /content/kitchen-fire-noise-poc/scripts/colab_realtest_confsweep.py     # (d-3) confsweep_edge_gray.json (recall-matched)
+```
+- **(a) 판정**: recall_scene 매칭 지점서 엣지 fpr < 2g면 win(단 **1-seed·다중비교라 "유망"까지·seed 재현 필요**).
+- **(d) 판정**: gray 조리 fpr **내리면 색(hue)이 조리 헛불 주범**(색-강건 대책 유효)·**유지되면 밝기/구조가 주범**(색 대책 무의미). gray는 recall 하락 예상 → (d-3) conf sweep로 recall-matched 확인.
+- 캐시: `{OUT_DIR}_edge_<mode>`는 eval 이 만든 것 재사용(동일 이미지) → confsweep conf0.25 가 eval 과 일치해야 sanity.
 
 ---
 
