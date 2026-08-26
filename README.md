@@ -5,6 +5,34 @@
 > 📄 **미팅용 전체 요약 → [SUMMARY_meeting.md](docs/SUMMARY_meeting.md)** · **상세 서사·파이프라인 도식 → [DETAIL.md](docs/DETAIL.md)** · v3 결과·반론 → [MEETING_v3_probe.md](docs/MEETING_v3_probe.md)
 > 🔬 **미팅 이후 과정 요약 → [AFTER_meeting.md](docs/AFTER_meeting.md)** (실제 데이터 방향·진행 중)
 
+---
+
+## 🧪 생성형 합성 데이터 제작 기준 (#6 · 진행 중)
+
+급식실/상업주방 CCTV 유류불 이미지를 **생성형 모델로 만들어 사전학습 풀**을 구성한다(커리큘럼: 생성 사전학습 → 실 파인튜닝). **이미지 품질은 필요조건일 뿐, 전이 개선 여부는 측정 대상(미확정).** 프롬프트 전문·템플릿 = [docs/gen_prompts.md](docs/gen_prompts.md) · 학습·판정 = [MEETING §6.4](docs/MEETING_2026-08-26.md).
+
+**도구:** Nano Banana Pro + Codex(GPT-image) **2개면 충분**(서로 다른 attractor로 단일 모델 mode-collapse 회피). 더 늘리는 건 수확체감 — **일일 한도 여유**나 **특정 장면 갭**일 때만 다른 계열(SD/Flux 등) 추가. Bing/Designer는 DALL-E 기반이라 GPT와 중복.
+
+**고정 (도메인 앵커 — 배포 급식실 CCTV를 닮게, 다양화하지 않음):** `CCTV surveillance · grainy · low-resolution · compression artifacts · fluorescent · timestamp · no people · not cinematic`.
+
+**변주 (다양성 축):**
+
+| 축 | 기준 |
+|---|---|
+| **배경** | **배포 도메인(상업/급식 주방) 안에서만** 변주(벽재질·연식/청결·규모·지역). 가정집·야외 금지(도메인 매칭 붕괴 = 공개모델·D-Fire 실패 방향) |
+| **불 크기** | **소형 40 / 중간 40 / 큰불 20** — 소형(초기불)이 실 test 약점(sc14) 겨냥이라 최우선. `strong flames` 도배 금지(강점 강화·약점 방치 = 편향) |
+| **각도** | **높은 각도(천장·측면·코너 어안) 주력** + eye-level 소수(배포는 천장 CCTV라 eye-level은 off-domain) |
+| **프레이밍** | wide / medium-close / close — 단 **소형불은 close**로(점처럼 작아지면 라벨 불가) |
+| **용기·타임스탬프** | 웍·튀김기·솥·팬 교대 · 타임스탬프 값 **매번 변경**(같은 프롬프트 재실행 금지 = near-dupe 방지) |
+
+**유류불 판별 (FP 방지의 핵심):** 양성은 `uncontrolled oil/grease fire ... from the oil surface, with smoke`로 명시 — **정상 조리 화염(가스불·플람베·웍헤이)과 헷갈리는 이미지는 검수에서 제외**한다. 안 그러면 "조리 화염 = 불"로 학습해 **조리 헛불(FP)이 늘어** ⑤ 하드네거로 줄인 효과를 되돌린다. (솥 화재=사고 명확·안전 / 가스 웍 화재=조리와 애매·주의)
+
+**워크플로우:** 1×2 그리드는 [`slice_grid.py`](scripts/slice_grid.py)로 슬라이스(검은띠·캡션·gutter 자동 제거) → 개별 패널 라벨 · 단일 이미지는 그대로 → Roboflow 박스(class0=fire) → YOLO export. **큐레이션 = 조리-애매·near-dupe·도메인 이탈 제외.**
+
+> 이 기준 자체가 발표 자산 — "생성형 데이터를 무슨 기준으로 만들었나"에 대한 방어적 답(도메인 매칭 우선·FP 경계·약점 겨냥).
+
+---
+
 # 🔄 프로젝트 방향 전환 제안 (2026-08-20)
 
 **v1 (완료)** — 실제 주방 사진에 불꽃을 **합성**해 학습 → **실제 화재로 검증**.
