@@ -6,7 +6,9 @@
 
 **도메인갭 지도 현황(§2):** ❌ 못닫음 = 불꽃(v2)·표현(v3)·혼합·**#2커리큘럼**·**#4도메인랜덤화**·yolo11·공개모델·D-Fire / ✅ 닫음 = 실 in-domain 데이터·조리 하드네거(⑤)·시간축·per-site. **병목 = 도메인 매칭(데이터양·모델·불꽃품질 아님).**
 
-**#2 커리큘럼 ✅완료=갭 못닫음(2026-08-26):** 2curr recall 0.813=2g · fpr_급식실 0.409(2g 0.260 악화) · scene 재분배 · 1-seed·conf미매칭. (BASE_YOLO=v8_C0_s1·BASE_TAG=curr split_audit → real_only_grouped_curr)
+**#2 커리큘럼 ✅완료=갭 못닫음(2026-08-26):** 2curr recall 0.813=2g · fpr_급식실 0.409(2g 0.260 악화) · scene 재분배 · 1-seed·conf미매칭. (재현: `BASE_YOLO=<fire_frames>/runs_phaseB/v8_C0_s1/best.pt`[weights/ 없음 주의·runs_if 패턴과 다름]·`BASE_TAG=curr` split_audit → real_only_grouped_curr)
+
+**⚠️ TODO(#1 재점검서 발견·다음 Colab): yolo11(#1) sc14 값 미기록** — #1은 sc15만 적고 sc14(갭 정의 장면) 누락(#2·#4는 기록). "모델 교체가 갭 닫나" 판정이 sc14에 달림 → yolo11 eval json(`indoorfire_eval/oilfire_realtest_eval.json` rows.2y11_…scene_recall)서 sc14 추출 → MEETING §6.3 #1 셀·§2 지도 "clean 개선 미확정" 확정/갱신. 그때까지 #1 판정=보류(효과없음 단정 철회함).
 
 **#4 도메인 랜덤화 ✅완료=커리큘럼 무기여·합성단독만 개선(2026-08-26):** 신규 [`colab_synth_dr.py`](../scripts/colab_synth_dr.py)(colab_synth 코어 재사용 + DR층[넓은 스케일/위치·불꽃색 지터·실 CCTV 열화 저해상/grain/blur/jpeg·박스보존만]·BASE_MODE 기본 C1·WORK_SIZE 640·로컬 /content 출력·진행표시·synth_DR 파괴가드). **2dr 0.813/0.848/fpr 0.265 ≈ 2g 0.813/0.846/0.260(무기여·무해) · 1dr(DR-synth-only) 0.518 > 1_synth(C0) 0.357(12/16장면 broad↑)=합성단독 첫 개선.** 단 원인미분리(DR열화 vs atlas 불꽃 vs 넓은배치)·conf미매칭(능력 vs 운영점)·1-seed·sc14 여전 0. §2·§6.2·§6.3 기록.
 
