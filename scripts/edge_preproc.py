@@ -14,13 +14,16 @@
 #   sobelb   : B(채널0, BGR) ← 소벨 엣지. R·G(불의 난색)는 보존 → recall 리스크 최저. **1순위.**
 #   blend    : RGB 전부 보존 + 엣지를 alpha 로 덧입힘(구조 강조, 색도 유지). 2순위.
 #   edgegray : 순수 소벨(색 완전 제거·3채널 복제). recall 리스크 최대 — 도메인갭 지도 완성용.
+#   gray     : 색(hue)만 제거·밝기/텍스처 보존(소벨 아님·엣지 아님). = "색이 조리 헛불 원인인가"의
+#              대조군(#3 원 가설 직접 테스트). 조리 fpr 내리면 색이 주범·유지되면 밝기/구조가 주범.
 #
-# env(두 스크립트 공통): EDGE_MODE(''=off)·EDGE_GAIN(소벨 스케일, 기본 0.5)·EDGE_ALPHA(blend, 기본 0.4)
+# env(세 스크립트 공통): EDGE_MODE(''=off)·EDGE_GAIN(소벨 스케일, 기본 0.5)·EDGE_ALPHA(blend, 기본 0.4)
+#   (gray 모드는 GAIN·ALPHA 무시 — 소벨을 안 씀.)
 
 import cv2
 import numpy as np
 
-MODES = ('sobelb', 'blend', 'edgegray')
+MODES = ('sobelb', 'blend', 'edgegray', 'gray')
 
 
 def edge_suffix(mode):
@@ -66,6 +69,8 @@ def edge_transform(bgr, mode='sobelb', gain=0.5, alpha=0.4):
         out = np.clip((1.0 - alpha) * bgr.astype(np.float32) + alpha * edge3, 0, 255).astype(np.uint8)
     elif mode == 'edgegray':                   # 순수 구조(색 제거)
         out = cv2.cvtColor(mag, cv2.COLOR_GRAY2BGR)
+    elif mode == 'gray':                        # 색(hue)만 제거·밝기/텍스처 보존(소벨 미사용) = 색 인과 대조군
+        out = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
     else:
         raise ValueError(f'알 수 없는 EDGE_MODE={mode!r} (택1: {MODES})')
     return out
