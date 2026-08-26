@@ -288,10 +288,53 @@ if DFIRE_DIR:
 # ---------------------------------------------------------------------------
 # 재학습
 # ---------------------------------------------------------------------------
+def _overfit_report(run_dir):
+    """results.csv 로 과적합 점검: 실제 학습 에폭 수·val mAP 최고 에폭(best.pt 시점)·
+    최고 이후 val 손실이 오르는지. best_epoch << EPOCHS 면 조기종료·과적합 꼬리 버려짐."""
+    import csv
+    fp = f'{run_dir}/results.csv'
+    if not os.path.exists(fp):
+        print(f'  [곡선] results.csv 없음: {fp}'); return
+    rows = list(csv.DictReader(open(fp)))
+    if not rows:
+        return
+    rows = [{k.strip(): v for k, v in r.items()} for r in rows]
+    def col(r, *cands):
+        for c in cands:
+            if c in r and r[c] not in ('', None):
+                try: return float(r[c])
+                except ValueError: pass
+        return None
+    n_run = len(rows)
+    maps = [col(r, 'metrics/mAP50-95(B)', 'metrics/mAP50(B)') for r in rows]
+    vloss = [col(r, 'val/box_loss') for r in rows]
+    valid = [(i, m) for i, m in enumerate(maps) if m is not None]
+    if not valid:
+        print(f'  [곡선] {n_run}에폭 학습 (지표열 파싱 실패)'); return
+    best_i, best_m = max(valid, key=lambda x: x[1])
+    stopped_early = n_run < EPOCHS
+    tail = ''
+    if vloss[best_i] is not None and vloss[-1] is not None:
+        d = vloss[-1] - vloss[best_i]
+        tail = f' · best후 val_loss {"↑" if d>0 else "↓"}{abs(d):.3f}'
+    print(f'  [과적합 점검] 실제 {n_run}/{EPOCHS}에폭'
+          f'{" (patience 조기종료)" if stopped_early else " (상한 도달)"}'
+          f' · best.pt=ep{best_i+1}(val mAP {best_m:.3f}){tail}')
+    print(f'    → best({best_i+1}) 이후 {n_run-best_i-1}에폭은 best.pt 에 미반영(과적합 꼬리 버려짐). '
+          f'곡선 그림: {run_dir}/results.png')
+    try:      # Colab 인라인 표시(train/val loss·mAP 곡선 눈으로 확인)
+        from IPython.display import Image as _Img, display as _disp
+        png = f'{run_dir}/results.png'
+        if os.path.exists(png):
+            _disp(_Img(filename=png))
+    except Exception:
+        pass
+
 def train(name, data_yaml):
-    print(f'\n=== 재학습: {name} (base {BASE_YOLO} · epochs {EPOCHS}) ===')
+    print(f'\n=== 재학습: {name} (base {BASE_YOLO} · epochs {EPOCHS} cap · patience 15) ===')
     YOLO(BASE_YOLO).train(data=data_yaml, epochs=EPOCHS, imgsz=640, patience=15,
-                          project=PROJ, name=name, exist_ok=True, verbose=False, plots=False)
+                          project=PROJ, name=name, exist_ok=True, verbose=False, plots=True)
+    _overfit_report(f'{PROJ}/{name}')   # 실제 에폭·best 시점·val 손실 꼬리 출력(과적합 눈으로 확인)
     return f'{PROJ}/{name}/weights/best.pt'
 
 # mixed 재학습(선택): synth 를 재분할 train 에 더함
