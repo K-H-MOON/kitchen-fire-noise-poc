@@ -1,23 +1,25 @@
-# HANDOFF — 다음 세션 이어가기 (2026-08-26 갱신)
+# HANDOFF — 다음 세션 이어가기 (2026-08-27 갱신)
 
-## ▶▶▶ 새 세션 즉시 작업 (2026-08-26 · 생성형 합성 실험 #6, 진행 중)
+## ▶▶▶ 새 세션 즉시 작업 (2026-08-27 · #3 엣지/소벨 + #6 생성형 수집)
 
-**★기준 문서 = [`docs/MEETING_2026-08-26.md`](MEETING_2026-08-26.md)** (README 최상단 고정). 발표 준비 전부 여기: 목표(발표)·도메인갭 지도(§2)·배찬우 팀원 검수 반영(§4 presrc A안)·미팅 피드백 triage(§5)·방안목록(§6.2)·실험로그(§6.3)·**생성형 설계·10프롬프트·파이프라인(§6.4)**·발표서사(§7)·하지말것(§8). **★작업 원칙: 단정 금지 — 확정/시사/미확정 구분, 미확정은 "해봐야 안다"([[no-premature-conclusions]]). env 고유·앰비언트 rmtree 가드([[script-safety-env-destructive]]).**
+**★기준 문서 = [`docs/MEETING_2026-08-26.md`](MEETING_2026-08-26.md)** (README 최상단). 도메인갭 지도(§2)·검수반영(§4)·피드백 선별(§5)·방안(§6.2)·실험로그(§6.3)·생성형 설계+`gen_prompts.md`(§6.4)·서사(§7)·지양(§8). **★작업 원칙: 단정 금지(확정/시사/미확정, 미확정="해봐야 안다" [[no-premature-conclusions]])·env 고유·rmtree 가드([[script-safety-env-destructive]]).**
 
-**프로젝트 목표 재정의(이 세션): 실배포·연구 아님 = 발표.** "도메인 갭 개선을 **시도할 수 있는 만큼 다 해보고 지도 그리기**(exhaustive). recall 0.9가 목표 아님." 여지 조금이라도 있으면 다 돌려본다(사용자 원칙).
+**도메인갭 지도 현황(§2):** ❌ 못닫음 = 불꽃(v2)·표현(v3)·혼합·**#2커리큘럼**·**#4도메인랜덤화**·yolo11·공개모델·D-Fire / ✅ 닫음 = 실 in-domain 데이터·조리 하드네거(⑤)·시간축·per-site. **병목 = 도메인 매칭(데이터양·모델·불꽃품질 아님).**
 
-**이 세션 완료:** ①공개 baseline(우리 도메인 recall **0.14**=미전이) ②D-Fire 실데이터 추가(recall 무개선=**negative**) ③배찬우 팀원 test 검수 반영(크로스체크로 presrc 체계적 오염 확증→**A안 de-emphasize 확정**, fpr는 fpr_급식실만 씀) ④yolo11(#1: **1회관측** 다른 운영점 v11 더 민감 recall↑/fpr↑, **seed-robust 미확인**) ⑤커리큘럼=기존 컴포지팅합성 스킵→생성형으로.
+**#2 커리큘럼 ✅완료=갭 못닫음(2026-08-26):** 2curr recall 0.813=2g · fpr_급식실 0.409(2g 0.260 악화) · scene 재분배 · 1-seed·conf미매칭. (BASE_YOLO=v8_C0_s1·BASE_TAG=curr split_audit → real_only_grouped_curr)
 
-**★★현재 활성 = 생성형 합성(#6) — 상세 §6.4:**
-- 도구=**Google AI Studio**(무료 tier ~500/일, Nano Banana). YingTu 등 third-party는 토큰오류→금지.
-- **사용자 작업(진행 중):** 10프롬프트(§6.4)로 각 30~40장 → `gen_fire/p01~p10` 하위폴더(~300~500) → **Roboflow 불꽃 박스→YOLO export(class0=fire)**. 첫 테스트 이미지 도메인매칭 좋음(어안CCTV+타임스탬프+웍 기름불).
-- **내 작업(다음 세션):** ⓐ gen 데이터빌더(하위폴더 재귀→YOLO·접두어 충돌방지) ⓑ 커리큘럼: gen-synth 사전학습→`BASE_YOLO`=그모델로 실 파인튜닝(split_audit)→`real_only_grouped_gencurr` ⓒ eval에 `2gencurr` 추가→실 proxy로 2g 대조. **판정 2gencurr ≈/>/< 2g.** (이미지 좋음=필요조건, 전이개선 미확정=측정할 것)
+**#4 도메인 랜덤화 ✅완료=커리큘럼 무기여·합성단독만 개선(2026-08-26):** 신규 [`colab_synth_dr.py`](../scripts/colab_synth_dr.py)(colab_synth 코어 재사용 + DR층[넓은 스케일/위치·불꽃색 지터·실 CCTV 열화 저해상/grain/blur/jpeg·박스보존만]·BASE_MODE 기본 C1·WORK_SIZE 640·로컬 /content 출력·진행표시·synth_DR 파괴가드). **2dr 0.813/0.848/fpr 0.265 ≈ 2g 0.813/0.846/0.260(무기여·무해) · 1dr(DR-synth-only) 0.518 > 1_synth(C0) 0.357(12/16장면 broad↑)=합성단독 첫 개선.** 단 원인미분리(DR열화 vs atlas 불꽃 vs 넓은배치)·conf미매칭(능력 vs 운영점)·1-seed·sc14 여전 0. §2·§6.2·§6.3 기록.
 
-**후순위 대기:** 데모영상(Kitchen Grease 클립, 원래작업·미완)·나머지 방안(#3엣지·#4도메인랜덤화·#5표적합성·#7도메인적응)·COMPROMISED_SCENES 최종eval(단 sc15는 yolo11이 검출0.938→compromised 아닐 수도).
+**★★즉시 다음 = #3 엣지/소벨 (사용자 "돌리자" 승인 · 스크립트 아직 미작성):**
+- 설계: 이미지에 **엣지(소벨) 채널 전처리** → 학습 → eval. 색 기반 헛불(불색 음식) 감소 검증. #2/#4보다 배관 큼 — **train·Indoor·oilfire_realtest 전부에 일관 전처리** 필요. 사전확률 낮음(색 빼면 불색 정의 손실·recall 리스크, 단 낮은 사전확률=스킵 사유 아님·map 완성용).
+- 구현안: 3ch 유지하며 한 채널을 소벨로 교체 or RGB+edge 블렌드(4ch 수술 회피)가 저위험. eval에 `2edge`(가칭) 행 추가.
+- **★ 새 세션 첫 명령 예: "#3 엣지/소벨 스크립트 작성해줘 — 엣지 채널 전처리→학습→eval. 오류·누락 재검토 후 Colab 레시피까지."**
 
-**이 세션 신규/수정 스크립트(전부 커밋·푸시됨):** `colab_baseline_pretrained.py`(공개모델 대조·클래스 이름매핑)·`colab_fetch_dfire.py`(Kaggle D-Fire·DFIRE_OUT·삭제가드)·`colab_inspect_presrc.py`(presrc 오라벨 몽타주)·`colab_indoorfire_split_audit.py`(+DFIRE_DIR·+**BASE_YOLO/BASE_TAG**=아키텍처/커리큘럼용)·`colab_realtest_eval.py`(+COMPROMISED_SCENES 이중집계·+PRESRC_DROP·+2df·+2y11 모델).
+**#6 생성형 (수집 중·병행):** 도구 **Nano Banana Pro(사비 ₩29,000·~70장/일)+Codex(GPT image) 2개**(다른 attractor로 다양성·비율 5:5 불필요·9:1 지배만 아니면·효과 미비 시 SD/Flux/Grok/Ideogram 3번째). [`gen_prompts.md`](gen_prompts.md) 필드템플릿(고정 도메인앵커 + 변주 슬롯·소40중40대20·유류불 판별 `oil/grease fire from the oil surface`·near-dupe 방지). 1×2 그리드→[`slice_grid.py`](../scripts/slice_grid.py)→2배·단일 그대로. 수집물=OneDrive 생성이미지 폴더(MEETING §5 링크). **검수 TODO(다 모으면 폴더째): 몽타주+크로스체크. NB top폴더 "CRT 모니터 찍은 사진"(2단 세로스택·off-domain·가로슬라이스 불가) 제외 · 중복파일 · 그리드/단일 분리.** 데이터 준비되면 gen 빌더 + 커리큘럼(BASE만 gen모델로 교체) + eval `2gencurr` vs 2g.
 
-**재현/함정(불변):** /content 세션소멸→재빌드 레시피(아래 "A안 재현" §참고)·**Drive FUSE 끊김→`drive.mount(force_remount=True)`+이미받은파일 스킵 idempotent copy**(이 세션 실제 발생·복구)·모델은 Drive `runs_if` 저장(생존)·`%run -i`는 RANGES 파이썬변수용·테스트셋 재빌드는 셀A(로컬 oilfire_raw 복사)+셀B(NIST+build_firetest).
+**#4/#6 커리큘럼 Colab 재현(모델은 Drive 생존):** ⓐ 재clone(fire-noise + fire-poc 아틀라스) ⓑ(#4) `colab_synth_dr.py` TRAIN=0 QC(_check_dr.jpg)→TRAIN=1 학습→runs_if/synth_dr ⓒ split_audit `BASE_YOLO=…/synth_dr/weights/best.pt`·`BASE_TAG=dr`→real_only_grouped_dr ⓓ **eval 전 test 재빌드 필수(아래 "A안 재현" §셀1~2)** → `colab_realtest_eval.py`(1dr·2dr·2curr·2gencurr 행).
+
+**재현/함정(불변):** /content 세션소멸→재빌드 한 세션 연속 · Drive FUSE 끊김→`force_remount=True` · 모델은 Drive `runs_if` 저장(생존) · `%run -i`는 RANGES 파이썬변수용 · **eval은 test(oilfire_realtest) 재빌드 후에만**(안 하면 "양성 없음" AssertionError — 이 세션 실제 발생).
 
 ---
 
