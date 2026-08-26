@@ -20,7 +20,7 @@
 - **★진행 결정 = (a) conf sweep → (d) grayscale → (c) #6** (사용자 승인 2026-08-27). 도구 ✅완성:
   - confsweep에 `EDGE_MODE` 추가(realtest_eval 동일 패턴·같은 `{TEST}_edge_<mode>` 캐시 재사용)
   - edge_preproc에 **`gray` 모드** 추가 = 색(hue)만 제거·밝기/텍스처 보존 = **#3 원 가설(색이 조리 fpr 원인?) 대조군**(edgegray=엣지-only와 구분).
-  - **(a)**: blend/sobelb를 recall-matched로 2g와 비교(2g는 EDGE 미설정 confsweep, 엣지는 EDGE_MODE=blend/sobelb) → 같은 recall_scene 지점 fpr 비교. blend가 낮으면 win(단 1-seed·다중비교라 "유망"까지).
+  - **(a) ✅완료(2026-08-27) = blend ⚠️→❌:** conf sweep recall-matched 비교서 **엣지(blend·sobelb) 전 구간 2g에 fpr_급식실 열세**(0.80서 2g 0.15 vs blend 0.27 vs sobelb 0.36) → **엣지는 RGB(2g)에 Pareto 지배됨.** blend conf0.25 우위는 순수 운영점(기각). ⑤(2ck 0.011@0.815) 압도. 1-seed이나 전구간 일관·격차 커 견고. json confsweep{,_edge_blend,_edge_sobelb}.json.
   - **(d)**: EDGE_MODE=gray 로 split_audit 학습→eval(2edge_gray)→confsweep. 조리 fpr 내리면 색이 주범·유지되면 밝기/구조가 주범.
   - **재현 레시피 아래 "#3 (a)(d) 재현".**
 
