@@ -12,7 +12,9 @@
 
 **#4 도메인 랜덤화 ✅완료=커리큘럼 무기여·합성단독만 개선(2026-08-26):** 신규 [`colab_synth_dr.py`](../scripts/colab_synth_dr.py)(colab_synth 코어 재사용 + DR층[넓은 스케일/위치·불꽃색 지터·실 CCTV 열화 저해상/grain/blur/jpeg·박스보존만]·BASE_MODE 기본 C1·WORK_SIZE 640·로컬 /content 출력·진행표시·synth_DR 파괴가드). **2dr 0.813/0.848/fpr 0.265 ≈ 2g 0.813/0.846/0.260(무기여·무해) · 1dr(DR-synth-only) 0.518 > 1_synth(C0) 0.357(12/16장면 broad↑)=합성단독 첫 개선.** 단 원인미분리(DR열화 vs atlas 불꽃 vs 넓은배치)·conf미매칭(능력 vs 운영점)·1-seed·sc14 여전 0. §2·§6.2·§6.3 기록.
 
-**★★즉시 다음 = #3 엣지/소벨 ✅스크립트 작성 완료(2026-08-27, 미실행 — Colab 학습·eval 대기):**
+**★★#3 엣지/소벨 sobelb ✅실행 완료 = 갭 못 닫음(오히려 fpr 2× 악화, 2026-08-27):** 2edge_sobelb recall 0.825(≈2g 0.813·recall-matched)인데 **fpr_급식실 0.541 = 2g 0.260의 ~2× 악화** · sc14 0.175→0.025(약점도 악화) · sc15 0.438→0.875. 색-헛불 감소 가설과 **반대**(B채널→엣지가 조리 텍스처에 더 반응 or B색 손실로 비-화염 기각력↓, 시사). 과적합 없음(val mAP ep60까지 단조상승 0.13→0.47·patience 미발동). sanity=같은 실행서 RGB 전 모델 문서값 재현. **미확정=1-seed·sobelb 한 모드만**(blend[색보존+엣지]·edgegray[색제거] 미시험). §6.3 #3·§2 지도·§6.2 기록 완료. **다음 선택지: blend/edgegray로 지도 완성 or #3 종료하고 #6(생성형)으로.** (아래는 실행 전 원설계 참고)
+
+**(원설계·완료) #3 엣지/소벨 스크립트(2026-08-27):**
 - 신규 [`edge_preproc.py`](../scripts/edge_preproc.py) = **학습·평가 공유 단일 소스**(변환 드리프트=실험 오염 방지). 3ch 유지·4ch 수술 회피. 3모드(env `EDGE_MODE`):
   - `sobelb` = B채널만 소벨 엣지로 교체(R·G=불 난색 보존)·**recall 리스크 최저·1순위** · `blend` = RGB 전부 보존+엣지 α덧입힘(2순위) · `edgegray` = 순수 소벨(색 제거·리스크 최대·지도 완성용).
   - env: `EDGE_GAIN`(소벨 스케일 0.5)·`EDGE_ALPHA`(blend 0.4)·고정 스케일(프레임의존 min-max 회피=train/eval 일치).
