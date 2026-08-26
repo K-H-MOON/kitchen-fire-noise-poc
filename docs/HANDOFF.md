@@ -32,9 +32,9 @@ os.environ['START']='70'; os.environ['END']='80'; os.environ['OUT_MP4']='/conten
 
 ---
 
-## ▶▶▶ (병행) 공개 사전학습 baseline — 배찬우 리서치 검증 ✅ (2026-08-25)
+## ▶▶▶ (병행) 공개 사전학습 baseline — 배찬우 팀원 리서치 검증 ✅ (2026-08-25)
 
-팀원 배찬우가 md 리서치(`steam-smoke-yolo-research.md`: ①공개 fire·smoke YOLO 바로 돌리기 ②방향B=수증기-강건성 프레이밍 ③데모영상 Veo/Sedance 생성) 제출 + "빠르게 돌려볼 수 있나". → `colab_baseline_pretrained.py`(신규·커밋 9321c1d) 로 **공개모델을 우리 clean test 에 그대로 얹어 우리 2g·2ck 와 같은지표 대조**.
+팀원 배찬우 팀원가 md 리서치(`steam-smoke-yolo-research.md`: ①공개 fire·smoke YOLO 바로 돌리기 ②방향B=수증기-강건성 프레이밍 ③데모영상 Veo/Sedance 생성) 제출 + "빠르게 돌려볼 수 있나". → `colab_baseline_pretrained.py`(신규·커밋 9321c1d) 로 **공개모델을 우리 clean test 에 그대로 얹어 우리 2g·2ck 와 같은지표 대조**.
 
 - **함정: TommyNgx repo 게이트(401 GatedRepoError)** → 게이트없는 `Mehedi-2-96/fire-smoke-detection-yolo`(`fire_smoke_yolov8s_model.pt`·cls {0:fire,1:other,2:smoke}·Apache) 로 대체(예비 `raidavid/yolov8_fire_and_smoke`=`weights/best.pt`). 클래스는 이름기준 자동매핑(fire/smoke id).
 - **결과(conf0.25·재빌드 test fire359/조리181/발화전301):**
@@ -47,13 +47,13 @@ os.environ['START']='70'; os.environ['END']='80'; os.environ['OUT_MP4']='/conten
 
   공개모델 16장면중 **7개 정확 0.000**(아예 미검출). 재빌드 test 서 우리 2g/2ck scene recall 이전측정과 정확일치=충실복원 sanity.
 - **몽타주 육안 확정: (1)놓친불=대형 wok플람베·큰 개방화염도 놓침**(창백극소형불만 아님)→도메인전이 실패(산불/실외 학습→급식실 유류불 미전이). **(2)조리헛불=금색 튀김음식(불색)·스팀·스테인리스 반사**=우리 pre-⑤ 와 동일함정. **(3)수증기→smoke 8장 명시 오검출.**
-- **판정=공개모델 지름길 아님. 어느축이든 우리 서사강화.** 발표문장: "공개 fire·smoke 모델 존재하나 우리 급식실 유류불 도메인 미전이(recall 0.14)→그래서 실 in-domain 학습(0.81)+조리 하드네거(fpr ~0.03) 필요". 배찬우 §21경고(공개 fire YOLO 많음=맞음)의 핵심은 '전이는 안 된다'.
+- **판정=공개모델 지름길 아님. 어느축이든 우리 서사강화.** 발표문장: "공개 fire·smoke 모델 존재하나 우리 급식실 유류불 도메인 미전이(recall 0.14)→그래서 실 in-domain 학습(0.81)+조리 하드네거(fpr ~0.03) 필요". 배찬우 팀원 §21경고(공개 fire YOLO 많음=맞음)의 핵심은 '전이는 안 된다'.
 - **방향B(수증기-강건성)=전환 아닌 보강재.** FASDD(12만·`NeitherFireNorSmoke` 하드네거 내장)·D-Fire(21k) 실데이터는 값짐(우리 Indoor 5k 대비). 단 NeitherFireNorSmoke=안개/구름이라 급식실 조리헛불(불색음식/반사) 직접해결 아님. §3 레시피(하드네거+연기임계↑+시간축)는 우리가 이미 완주(⑤·B 시간축). 데모용 생성영상(Veo)은 "실검출 시연"으론 금지(sim2real 논란)·삽화만.
 - **경계:** conf0.25 통일(공개 최적문턱 아닐수 있으나 대형화염 미검출이라 문턱무관)·frame-level·N작음. \*2ck 0.011은 전체 조리셋(학습장면 포함) 낙관값=정직 held-out 0.032/교차-주방 0.066. **미실행 옵션=공개모델 conf스윕(반박 원천봉쇄용, 원하면).** json `/content/baseline_pretrained.json`(로컬·세션소멸·Drive 미저장).
 
 ### D-Fire 실데이터 보강 실험 ✅ negative (2026-08-26)
 
-배찬우 제안 데이터셋(D-Fire 21k 실사)을 학습에 추가하면 recall 오르나 검증. `colab_fetch_dfire.py`(Kaggle·data.yaml 이름기준 fire자동매핑) → split_audit `DFIRE_DIR` 주입(양성5822+음성2178=8000) → `real_only_grouped_df`(40ep) → 같은 실 proxy test.
+배찬우 팀원 제안 데이터셋(D-Fire 21k 실사)을 학습에 추가하면 recall 오르나 검증. `colab_fetch_dfire.py`(Kaggle·data.yaml 이름기준 fire자동매핑) → split_audit `DFIRE_DIR` 주입(양성5822+음성2178=8000) → `real_only_grouped_df`(40ep) → 같은 실 proxy test.
 
 | 모델 | recall | scene | fpr_급식실 | fpr_발화전 |
 |---|---:|---:|---:|---:|
@@ -64,14 +64,14 @@ os.environ['START']='70'; os.environ['END']='80'; os.environ['OUT_MP4']='/conten
 
 - **판정: recall 무개선(−0.008·scene −0.017).** 장면 재분배(sc10·sc11 소폭↑ vs **창백불 sc14 0.175→0.050·sc15·sc09·sc02 악화**=일반 화재가 창백초기불에서 멀어짐, 도메인 시프트). fpr 내림(0.260→0.138)은 D-Fire 딸림음성 부수효과일뿐 **조리특화 2ck(0.011)/2cks(0.022)에 완패.**
 - **의미: 병목은 실화재 '양' 아니라 도메인매칭**(Indoor가 recall축 이미 포화). 더 부으면 시프트 심화. **배포추천 불변(2ck/2cks + 시간축 2-of-3).** 도메인갭 논지 재확정.
-- **발표문장:** "공개 실데이터(D-Fire 21k) 추가해도 recall 무개선 = 병목은 데이터양 아닌 도메인·특화음성." (배찬우 제안=합리적·falsifiable로 negative 확정, 아이디어 실패 아님)
-- sanity: 재빌드 test서 2g/2ck 등 이전수치 정확재현. 경계: CAP8000·40ep(전체·60ep면 미세差, 방향 안 뒤집힘)·절대값엔 배찬우검수 이슈나 상대비교 유효.
+- **발표문장:** "공개 실데이터(D-Fire 21k) 추가해도 recall 무개선 = 병목은 데이터양 아닌 도메인·특화음성." (배찬우 팀원 제안=합리적·falsifiable로 negative 확정, 아이디어 실패 아님)
+- sanity: 재빌드 test서 2g/2ck 등 이전수치 정확재현. 경계: CAP8000·40ep(전체·60ep면 미세差, 방향 안 뒤집힘)·절대값엔 배찬우 팀원검수 이슈나 상대비교 유효.
 - **★버그 near-miss:** fetch가 범용 `OUT_DIR` 재사용 → 세션잔여 `OUT_DIR`로 테스트셋 rmtree 삭제 직전(Drive백업으로 복구). `DFIRE_OUT` 분리 + 파괴삭제 가드 추가(커밋 d54d838·dab0d61).
 - json `indoorfire_eval/{oilfire_realtest_eval,indoorfire_regroup_df}.json` · 모델 `runs_if/real_only_grouped_df`.
 
-### 배찬우 테스트셋 검수 (fire_realtest_review.md, 2026-08-26) — 채택/반박
+### 배찬우 팀원 테스트셋 검수 (fire_realtest_review.md, 2026-08-26) — 채택/반박
 
-배찬우가 공유받은 `oilfire_realtest_share.zip`(841장) 전수 육안검수 → 진단서 제출.
+배찬우 팀원가 공유받은 `oilfire_realtest_share.zip`(841장) 전수 육안검수 → 진단서 제출.
 - **✅ 채택:** presrc `sc10` 오라벨(웍불꽃인데 음성) = **진짜 라벨버그**(fpr_발화전 부풀림) → presrc 전수 재검수+제거/이동 필요. recall clean/all 이중집계 제안 타당. nofire_kitchen 품질 좋음 확인.
 - **⚠️ 반박:** 헤드라인 "recall낮음=테스트탓"·"0.3=오염탓"은 **과장·오귀속** — 현재 clean recall 0.81/0.85(이미 셀2b로 1차 정리한 셋)이지 0.3 아님. 0.3은 **합성 전이실패**(clean서도 합성 0.36 vs 실 0.85)지 오염 아님 → "합성 괜찮았다" 오도 위험. 저화질(sc09)·자막(sc11) 프레임 제외는 **체리피킹**(불 보이면 배포대표라 유지, 불 가리는 소스아티팩트만 제외). sc14 clean인데 놓침=**진짜 검출기 약점**(창백불), 테스트탓 아님.
 - **행동:** presrc 오라벨 정리 + clean/all 이중집계(제외기준=불 가리는 비-배포 아티팩트만) + 발표에서 "0.3=오염" 금지("0.3=합성전이실패+일부오염, 실데이터로 0.85").
