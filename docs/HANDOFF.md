@@ -21,8 +21,8 @@
   - confsweep에 `EDGE_MODE` 추가(realtest_eval 동일 패턴·같은 `{TEST}_edge_<mode>` 캐시 재사용)
   - edge_preproc에 **`gray` 모드** 추가 = 색(hue)만 제거·밝기/텍스처 보존 = **#3 원 가설(색이 조리 fpr 원인?) 대조군**(edgegray=엣지-only와 구분).
   - **(a) ✅완료(2026-08-27) = blend ⚠️→❌:** conf sweep recall-matched 비교서 **엣지(blend·sobelb) 전 구간 2g에 fpr_급식실 열세**(0.80서 2g 0.15 vs blend 0.27 vs sobelb 0.36) → **엣지는 RGB(2g)에 Pareto 지배됨.** blend conf0.25 우위는 순수 운영점(기각). ⑤(2ck 0.011@0.815) 압도. 1-seed이나 전구간 일관·격차 커 견고. json confsweep{,_edge_blend,_edge_sobelb}.json.
-  - **(d) ✅완료(2026-08-27) = #3 원 가설 기각:** gray(색만 제거·밝기/텍스처 보존) conf0.25 fpr 0.127로 낮아보이나 recall 0.749로 덜 민감한 운영점 — recall-matched선 2g가 전 구간 fpr 낮음(0.71: 2g~0.068 vs gray 0.127) = **gray도 2g 지배.** → **조리 헛불은 hue 주범 아님·밝기/텍스처가 주범**(색 빼도 matched fpr 안 내림·단 recall도 잃어[ceiling 0.868→0.771·sc05 1.0→0] 완벽 인과분해는 아님). json confsweep_edge_gray.json·oilfire_realtest_eval_edge_gray.json.
-  - **★#3 종결(2026-08-27): 엣지·색 표현 전처리(sobelb·blend·gray) 전부 2g에 Pareto 지배 + 색 인과 기각 → 표현 트릭은 레버 아님 확정. 다음 = #6 생성형(도메인 매칭 데이터).**
+  - **(d) ✅완료(2026-08-27) = 색-기반 대책 무효:** gray(색만 제거·밝기/텍스처 보존) conf0.25 fpr 0.127로 낮아보이나 recall 0.749로 덜 민감한 운영점(함정) — recall-matched선 2g가 전 구간 fpr 낮거나 같음(유효 recall 명확히 낮음 0.71: 2g~0.068 vs gray 0.127·저recall 꼬리 ~동률) = **gray도 2g 지배.** → **색 제거가 fpr 순감소 못시킴=색-기반 대책 무효·hue 단독주범 아님**(밝기/질감 최소 동등 기여). 단 hue-FP가 밝기-FP로 대체됐을 가능성·gray recall손실[ceiling 0.868→0.771·sc05 1.0→0] 못배제 → hue vs 밝기 정확분해는 이 실험 밖. 과적합 없음(best=ep60). json confsweep_edge_gray·oilfire_realtest_eval_edge_gray.
+  - **★#3 종결(2026-08-27): 시험한 엣지·색 전처리(sobelb·blend·gray) 전부 2g에 Pareto 지배 + 색-기반 대책 무효 → 표현 전처리 계열 레버 아님(edgegray/4ch/타파라미터 미시험이라 계열 전반은 "가능성 낮음"). 다음 = #6 생성형(도메인 매칭 데이터).**
 
 **(원설계·완료) #3 엣지/소벨 스크립트(2026-08-27):**
 - 신규 [`edge_preproc.py`](../scripts/edge_preproc.py) = **학습·평가 공유 단일 소스**(변환 드리프트=실험 오염 방지). 3ch 유지·4ch 수술 회피. 3모드(env `EDGE_MODE`):
