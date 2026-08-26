@@ -1,0 +1,292 @@
+<title>급식실 불 감지 여정</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;700;800&display=swap');
+  :root{
+    --paper:#E9EEF2; --ink:#17233B; --ink-soft:#5A6B82; --line:#C7D2DC;
+    --fire:#EE5B43;     /* 진짜 불 / 갭 / 위험 */
+    --synth:#8B80D8;    /* 합성(가짜) */
+    --work:#2E9E8A;     /* 먹힌 것 */
+    --amber:#F5A623;    /* 강조 */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'Gothic A1',system-ui,sans-serif;color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;
+    background:
+      linear-gradient(var(--line) 1px,transparent 1px) 0 0/26px 26px,
+      linear-gradient(90deg,var(--line) 1px,transparent 1px) 0 0/26px 26px,
+      var(--paper);}
+  .wrap{max-width:640px;margin:0 auto;padding:0 20px}
+  .badge{display:inline-flex;align-items:center;gap:8px;color:#fff;
+    font-family:'Jua',system-ui,sans-serif;font-size:15px;padding:8px 16px;border-radius:999px;margin:34px 0 0;
+    box-shadow:0 6px 0 rgba(23,35,59,.15)}
+  .badge.fire{background:var(--fire)}.badge.work{background:var(--work)}.badge.end{background:var(--ink)}
+  .badge.rigor{background:var(--amber);color:#3a2a05}.badge.next{background:var(--synth)}
+  section{padding:44px 0 6px}
+  .step-no{font-family:'Jua',system-ui,sans-serif;color:var(--ink-soft);font-size:15px;letter-spacing:.15em;margin-bottom:6px}
+  h1{font-family:'Jua',system-ui,sans-serif;font-size:clamp(29px,7.6vw,44px);line-height:1.15;margin-bottom:14px;text-wrap:balance}
+  h2{font-family:'Jua',system-ui,sans-serif;font-size:clamp(23px,6.2vw,33px);line-height:1.2;margin-bottom:10px;text-wrap:balance}
+  .lead{font-size:clamp(16px,4.2vw,19px);color:var(--ink-soft);font-weight:500;max-width:44ch}
+  .firew{color:var(--fire)}.synthw{color:var(--synth)}.workw{color:var(--work)}.amberw{color:var(--amber)}
+  .card{background:#fff;border:2px solid var(--ink);border-radius:22px;padding:22px;margin-top:22px;
+    box-shadow:8px 8px 0 rgba(23,35,59,.12)}
+  .card.fire{border-color:var(--fire);box-shadow:8px 8px 0 rgba(238,91,67,.18)}
+  .card.synth{border-color:var(--synth);box-shadow:8px 8px 0 rgba(139,128,216,.18)}
+  .card.work{border-color:var(--work);box-shadow:8px 8px 0 rgba(46,158,138,.18)}
+  figure{margin:0}svg{display:block;width:100%;height:auto}
+  .cap{font-size:14.5px;color:var(--ink-soft);font-weight:600;margin-top:12px;text-align:center;text-wrap:balance}
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
+  .reveal.in{opacity:1;transform:none}
+  .bar{transform:scaleX(0);transform-origin:left center;transition:transform 1.1s cubic-bezier(.2,.8,.2,1)}
+  .in .bar{transform:scaleX(1)}
+  .trail{stroke-dasharray:6 9;stroke-dashoffset:420;transition:stroke-dashoffset 1.4s ease}
+  .in .trail{stroke-dashoffset:0}
+  .note{background:#FFF6E4;border:2px dashed var(--amber);border-radius:14px;padding:14px 16px;
+    font-size:15px;font-weight:600;margin-top:18px;color:#6b4e12}
+  .note b{font-family:'Jua',system-ui,sans-serif;color:#a06f10}
+  .note.win{background:#E7F6F1;border-color:var(--work);color:#155e50}
+  .note.win b{color:var(--work)}
+  .rows{display:flex;flex-direction:column;gap:16px}
+  .row{display:flex;gap:12px;align-items:flex-start}
+  .row .ic{font-size:24px;flex:none;line-height:1.15}
+  .row .tx{font-size:15px;font-weight:600;color:var(--ink);line-height:1.45}
+  .row .tx b{font-family:'Jua',system-ui,sans-serif;font-weight:400}
+  .divider{display:flex;align-items:center;gap:14px;margin:56px 0 0;color:var(--ink-soft)}
+  .divider::before,.divider::after{content:"";flex:1;height:2px;background:var(--line)}
+  .divider span{font-family:'Jua',system-ui,sans-serif;font-size:14px;letter-spacing:.1em}
+  .footer{text-align:center;padding:44px 0 60px;color:var(--ink-soft);font-size:13px}
+  .footer .try{font-family:'Jua',system-ui,sans-serif;background:var(--amber);color:#3a2a05;display:inline-block;
+    padding:10px 18px;border-radius:999px;margin-top:10px;border:2px solid #d4890f}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
+    .reveal{opacity:1;transform:none}.bar{transform:none}.trail{stroke-dashoffset:0}}
+</style>
+
+<div class="wrap">
+
+  <!-- ===== 인트로 ===== -->
+  <div class="badge fire">🔥 eli5 · 급식실 불 감지 (kitchen-fire-noise-poc)</div>
+
+  <section class="reveal">
+    <h1><span class="synthw">가짜 불</span>로 배우면<br><span class="firew">진짜 불</span>을 못 잡아요</h1>
+    <p class="lead">진짜 급식실 화재 영상은 거의 없어요.<br>그래서 컴퓨터로 만든 <b>합성 불</b>로 AI를 가르쳤는데 —<br>진짜 주방에선 잘 <b>못 잡았어요.</b><br>이 간극이 바로 <span class="firew">도메인 갭</span>이에요.</p>
+  </section>
+
+  <!-- ===== 1. 문제 ===== -->
+  <section class="reveal">
+    <div class="step-no">1 · 문제</div>
+    <h2>배운 곳과 <span class="firew">쓸 곳</span>이 달라요</h2>
+    <p class="lead">교과서(합성 불)로만 공부한 학생이<br>실제 시험(진짜 주방)에서 헤매는 것과 같아요.</p>
+
+    <div class="card fire">
+      <figure>
+        <svg viewBox="0 0 320 180" role="img" aria-label="합성 불로 배운 AI가 진짜 주방 불을 못 잡는 도메인 갭.">
+          <!-- 합성 불 -->
+          <g font-family="Jua" font-size="13" text-anchor="middle">
+            <rect x="12" y="60" width="86" height="58" rx="12" fill="#F1EFFB" stroke="var(--synth)" stroke-width="2"/>
+            <text x="55" y="88" font-size="22">🔥</text>
+            <text x="55" y="108" fill="var(--synth)">합성 불</text>
+            <text x="55" y="140" font-size="12" fill="var(--ink-soft)">(가짜·많음)</text>
+          </g>
+          <!-- 화살표 → AI -->
+          <line x1="102" y1="89" x2="128" y2="89" stroke="var(--ink)" stroke-width="2.4"/>
+          <polygon points="128,84 138,89 128,94" fill="var(--ink)"/>
+          <g font-family="Jua" font-size="13" text-anchor="middle">
+            <rect x="140" y="66" width="44" height="46" rx="11" fill="#fff" stroke="var(--ink)" stroke-width="2"/>
+            <text x="162" y="94" font-size="20">🤖</text>
+            <text x="162" y="128" font-size="12" fill="var(--ink-soft)">AI</text>
+          </g>
+          <!-- 균열(갭) -->
+          <path d="M206 22 L214 66 L202 96 L214 128 L206 162" fill="none" stroke="var(--fire)" stroke-width="2.6" stroke-dasharray="5 6"/>
+          <text x="209" y="16" font-family="Jua" font-size="12" fill="var(--fire)" text-anchor="middle">갭</text>
+          <!-- 진짜 주방 -->
+          <g font-family="Jua" font-size="13" text-anchor="middle">
+            <rect x="224" y="60" width="86" height="58" rx="12" fill="#FDECE9" stroke="var(--fire)" stroke-width="2"/>
+            <text x="267" y="88" font-size="22">🍳</text>
+            <text x="267" y="108" fill="var(--fire)">진짜 주방</text>
+            <text x="267" y="140" font-size="12" fill="var(--fire)">❌ 놓침</text>
+          </g>
+        </svg>
+      </figure>
+      <div class="cap">가짜로 배운 눈은 <span class="firew">진짜 불</span> 앞에서 흔들려요</div>
+    </div>
+  </section>
+
+  <!-- ===== 2. 시도들 ===== -->
+  <section class="reveal">
+    <div class="step-no">2 · 시도들</div>
+    <h2>온갖 방법을 <span class="synthw">다 해봤어요</span></h2>
+    <p class="lead">불꽃을 더 진짜같이, 표현을 바꿔, 순서를 바꿔,<br>장면을 다양하게, 엣지로 걸러, 다른 AI로, 공개 모델로…<br><b>대부분 갭을 못 닫았어요.</b></p>
+
+    <div class="card synth">
+      <figure>
+        <svg viewBox="0 0 320 180" role="img" aria-label="여러 시도들이 모두 실패 표시.">
+          <g font-family="Gothic A1" font-size="12.5" font-weight="700" text-anchor="middle">
+            <!-- row 1 -->
+            <g><rect x="10" y="14" width="92" height="30" rx="9" fill="#fff" stroke="var(--synth)" stroke-width="2"/><text x="52" y="33">불꽃 현실성</text><text x="96" y="20" font-size="13">❌</text></g>
+            <g><rect x="114" y="14" width="92" height="30" rx="9" fill="#fff" stroke="var(--synth)" stroke-width="2"/><text x="160" y="33">표현 바꾸기</text><text x="200" y="20" font-size="13">❌</text></g>
+            <g><rect x="218" y="14" width="92" height="30" rx="9" fill="#fff" stroke="var(--synth)" stroke-width="2"/><text x="264" y="33">커리큘럼</text><text x="304" y="20" font-size="13">❌</text></g>
+            <!-- row 2 -->
+            <g><rect x="10" y="54" width="92" height="30" rx="9" fill="#fff" stroke="var(--synth)" stroke-width="2"/><text x="56" y="73">장면 랜덤화</text><text x="96" y="60" font-size="13">❌</text></g>
+            <g><rect x="114" y="54" width="92" height="30" rx="9" fill="#fff" stroke="var(--synth)" stroke-width="2"/><text x="160" y="73">엣지 필터</text><text x="200" y="60" font-size="13">❌</text></g>
+            <g><rect x="218" y="54" width="92" height="30" rx="9" fill="#fff" stroke="var(--synth)" stroke-width="2"/><text x="264" y="73">다른 모델</text><text x="304" y="60" font-size="13">❌</text></g>
+            <!-- row 3 -->
+            <g><rect x="62" y="94" width="92" height="30" rx="9" fill="#fff" stroke="var(--synth)" stroke-width="2"/><text x="108" y="113">공개 모델</text><text x="148" y="100" font-size="13">❌</text></g>
+            <g><rect x="166" y="94" width="92" height="30" rx="9" fill="#fff" stroke="var(--synth)" stroke-width="2"/><text x="212" y="113">일반 실데이터</text><text x="252" y="100" font-size="13">❌</text></g>
+          </g>
+          <!-- 결론 화살표 -->
+          <text x="160" y="150" font-family="Jua" font-size="15" fill="var(--ink-soft)" text-anchor="middle">↓ 그럼 뭐가 통했지?</text>
+        </svg>
+      </figure>
+      <div class="cap">각각 그럴듯했지만 — 진짜 주방 앞에선 <span class="synthw">헛수고</span></div>
+    </div>
+    <div class="note"><b>안 된 것도 자산!</b> "이건 정답 레버가 아니다"를 하나씩 지운 것 = 우리 <b>지도</b>가 됐어요. 🗺️</div>
+  </section>
+
+  <div class="divider"><span>통한 것 ↓</span></div>
+
+  <!-- ===== 3. 먹힌 것 ===== -->
+  <div class="badge work">✅ eli5 · 진짜로 통한 것</div>
+
+  <section class="reveal">
+    <div class="step-no">3 · 먹힌 것</div>
+    <h2><span class="workw">세 가지</span>가 통했어요</h2>
+    <p class="lead">공통점은 하나 — <b>"진짜 주방에 가까운 진짜 데이터"</b>였어요.</p>
+
+    <div class="card work">
+      <figure>
+        <svg viewBox="0 0 320 210" role="img" aria-label="통한 세 가지의 전후 비교.">
+          <g font-family="Gothic A1" font-weight="700" font-size="13" fill="var(--ink)">
+            <!-- 1 놓침 -->
+            <text x="8" y="26">🎥 진짜 불 영상으로 학습 → <tspan fill="var(--work)">놓침 ↓</tspan></text>
+            <rect x="8" y="34" width="70" height="14" rx="7" fill="var(--fire)" opacity=".75"/>
+            <rect class="bar" x="8" y="34" width="250" height="14" rx="7" fill="var(--work)"/>
+            <text x="266" y="45" font-size="12" fill="var(--ink-soft)">0.24→0.85</text>
+            <!-- 2 헛불 -->
+            <text x="8" y="90">🍳 조리 장면 = "불 아냐" 학습 → <tspan fill="var(--work)">헛불 ↓</tspan></text>
+            <rect x="8" y="98" width="250" height="14" rx="7" fill="var(--fire)" opacity=".75"/>
+            <rect class="bar" x="8" y="98" width="26" height="14" rx="7" fill="var(--work)"/>
+            <text x="266" y="109" font-size="12" fill="var(--ink-soft)">10배 ↓*</text>
+            <!-- 3 시간축 -->
+            <text x="8" y="154">⏱️ 3번 중 2번 봐야 경보 → <tspan fill="var(--work)">깜빡 헛불 ↓</tspan></text>
+            <rect x="8" y="162" width="250" height="14" rx="7" fill="var(--fire)" opacity=".75"/>
+            <rect class="bar" x="8" y="162" width="42" height="14" rx="7" fill="var(--work)"/>
+            <text x="266" y="173" font-size="12" fill="var(--ink-soft)">6배 ↓</text>
+          </g>
+          <text x="8" y="198" font-family="Gothic A1" font-size="11.5" fill="var(--ink-soft)">* 우리가 학습에서 본 주방 기준(처음 보는 주방은 4번 챕터)</text>
+        </svg>
+      </figure>
+      <div class="cap">빨강=고치기 전 · <span class="workw">초록=고친 뒤</span></div>
+    </div>
+    <div class="note win">🍳 <b>핵심:</b> 튀김 음식·수증기·스테인리스 반사처럼 <b>불 같지만 불 아닌 것</b>을 "불 아냐"라고 같이 가르치니 헛불이 확 줄었어요.</div>
+  </section>
+
+  <!-- ===== 4. 남은 갭 ===== -->
+  <section class="reveal">
+    <div class="step-no">4 · 아직 안 풀린 것</div>
+    <h2><span class="firew">처음 보는</span> 주방은 어려워요</h2>
+    <p class="lead">학습에서 <b>본</b> 급식실은 잘해요.<br>하지만 <b>처음 보는</b> 급식실에선 아직 헛경보가 많아요.<br>그 주방 데이터로 조금 더 배우면(<b>per-site</b>) 풀려요 — 이게 현실 경로.</p>
+
+    <div class="card fire">
+      <figure>
+        <svg viewBox="0 0 320 150" role="img" aria-label="본 주방은 헛경보 적고 처음 본 주방은 많다.">
+          <g font-family="Jua" font-size="14" text-anchor="middle">
+            <!-- 본 주방 -->
+            <rect x="14" y="24" width="130" height="96" rx="14" fill="#E7F6F1" stroke="var(--work)" stroke-width="2"/>
+            <text x="79" y="46" fill="var(--work)">본 주방 ✅</text>
+            <g fill="var(--work)"><circle cx="55" cy="78" r="5"/></g>
+            <text x="79" y="104" font-family="Gothic A1" font-size="12" font-weight="700" fill="var(--ink-soft)">헛경보 거의 없음</text>
+            <!-- 처음 본 주방 -->
+            <rect x="176" y="24" width="130" height="96" rx="14" fill="#FDECE9" stroke="var(--fire)" stroke-width="2"/>
+            <text x="241" y="46" fill="var(--fire)">처음 본 주방 ❌</text>
+            <g fill="var(--fire)"><circle cx="205" cy="72" r="5"/><circle cx="228" cy="84" r="5"/><circle cx="252" cy="70" r="5"/><circle cx="275" cy="86" r="5"/><circle cx="238" cy="102" r="5"/><circle cx="262" cy="100" r="5"/></g>
+            <text x="241" y="118" font-family="Gothic A1" font-size="12" font-weight="700" fill="var(--fire)">헛경보 많음</text>
+          </g>
+        </svg>
+      </figure>
+      <div class="cap">점 하나 = 헛경보 하나 · <span class="firew">범용화(아무 주방)</span>는 아직 숙제</div>
+    </div>
+  </section>
+
+  <div class="divider"><span>어떻게 믿나 ↓</span></div>
+
+  <!-- ===== 5. 엄밀성 ===== -->
+  <div class="badge rigor">🔍 eli5 · 믿을 수 있게 만든 법</div>
+
+  <section class="reveal">
+    <div class="step-no">5 · 엄밀성</div>
+    <h2>숫자를 <span class="amberw">정직하게</span> 지켰어요</h2>
+    <p class="lead">좋은 숫자를 만드는 것만큼<br><b>속지 않는 것</b>도 중요했어요. 세 가지 습관:</p>
+
+    <div class="card">
+      <div class="rows">
+        <div class="row"><div class="ic">🔍</div><div class="tx"><b>시험지 이중검증</b> — 팀원이 테스트 영상을 전수 검사해, 불이 가려진 <b>오염 프레임</b>을 찾아 채점에서 뺐어요. (혼자가 아니라 둘이 교차확인)</div></div>
+        <div class="row"><div class="ic">📋</div><div class="tx"><b>멘토 피드백 반영</b> — 받은 조언의 약 <b>7할</b>은 이미 반영했거나, 우리 실험이 "그건 안 된다"는 답을 냈어요.</div></div>
+        <div class="row"><div class="ic">⚖️</div><div class="tx"><b>과장 안 하기</b> — 못 잡는 약점(창백 초기불)과 처음 본 주방 헛경보는 <b>숨기지 않고</b> 그대로 남겼어요. 잘 되는 장면만 골라 점수 올리는 건 금지.</div></div>
+      </div>
+    </div>
+    <div class="note"><b>왜?</b> "0.3점은 시험지가 더러워서"가 아니라 <b>"가짜 데이터가 전이 안 돼서"</b>가 진짜 원인 — 원인을 헷갈리지 않으려고요. 🧭</div>
+  </section>
+
+  <div class="divider"><span>다음 수 ↓</span></div>
+
+  <!-- ===== 6. 생성형(다음 수) ===== -->
+  <div class="badge next">🎨 eli5 · 다음 수 (진행 중)</div>
+
+  <section class="reveal">
+    <div class="step-no">6 · 다음 수</div>
+    <h2>진짜 같은 <span class="synthw">"가짜"</span>를 만들어요</h2>
+    <p class="lead">이번엔 아무 합성이 아니라 — 생성형 AI로<br><b>진짜 급식실 CCTV에 가까운</b> 기름 화재 이미지를<br>만들어서 다시 도전 중이에요.</p>
+
+    <div class="card next">
+      <figure>
+        <svg viewBox="0 0 320 160" role="img" aria-label="두 생성 AI가 급식실 불 이미지를 만들어 다시 학습.">
+          <g font-family="Jua" font-size="12.5" text-anchor="middle">
+            <!-- 두 생성기 -->
+            <g><rect x="10" y="18" width="96" height="38" rx="11" fill="#F1EFFB" stroke="var(--synth)" stroke-width="2"/><text x="58" y="35" font-size="17">🍌</text><text x="58" y="50" font-size="11" fill="var(--synth)">nano-banana</text></g>
+            <g><rect x="10" y="102" width="96" height="38" rx="11" fill="#FDECE9" stroke="var(--fire)" stroke-width="2"/><text x="58" y="119" font-size="16">🤖</text><text x="58" y="134" font-size="11" fill="var(--fire)">Codex</text></g>
+            <!-- 화살표 → 이미지 -->
+            <path d="M108 40 C 132 46, 132 74, 150 78" stroke="var(--ink-soft)" stroke-width="2.2" fill="none"/>
+            <path d="M108 118 C 132 112, 132 84, 150 80" stroke="var(--ink-soft)" stroke-width="2.2" fill="none"/>
+            <!-- 급식실 불 이미지 -->
+            <g><rect x="150" y="56" width="66" height="48" rx="11" fill="#fff" stroke="var(--ink)" stroke-width="2"/><text x="183" y="86" font-size="22">🔥</text></g>
+            <text x="183" y="120" font-size="11" fill="var(--ink-soft)">급식실 불</text>
+            <!-- → 재학습 -->
+            <line x1="220" y1="80" x2="246" y2="80" stroke="var(--ink)" stroke-width="2.4"/>
+            <polygon points="246,75 256,80 246,85" fill="var(--ink)"/>
+            <g><rect x="258" y="58" width="48" height="44" rx="11" fill="#E7F6F1" stroke="var(--work)" stroke-width="2"/><text x="282" y="86" font-size="19">🤖</text></g>
+            <text x="282" y="118" font-size="11" fill="var(--work)">다시 학습</text>
+          </g>
+        </svg>
+      </figure>
+      <div class="cap">서로 다른 두 AI로 <span class="synthw">다양하게</span> 생성 → 진짜 데이터에 얹어 재학습</div>
+    </div>
+    <div class="note"><b>정직하게:</b> 이미지가 진짜 같다는 건 <b>필요조건일 뿐</b> — 실제로 성능이 오를지는 <b>측정해봐야 알아요.</b> (아직 진행 중) 🧪</div>
+  </section>
+
+  <!-- ===== 7. 한 줄 ===== -->
+  <div class="divider"><span>한 줄 요약 ↓</span></div>
+  <div class="badge end">🎯 eli5 · 한 줄 요약</div>
+
+  <section class="reveal">
+    <h2>병목은 <span class="synthw">양·모델</span>이 아니라<br><span class="workw">도메인 매칭</span>이었어요</h2>
+    <p class="lead">시도할 수 있는 방법을 <b>다 돌려 지도를 그렸고</b> —<br>레버는 <b>실 in-domain 데이터 + 조리 특화 음성 + 시간축</b>이었어요.<br>데이터를 더 붓거나 AI를 바꾸는 게 아니라,<br><b>쓸 주방과 '같은 종류'의 진짜 데이터</b>가 핵심. 끝! 🎉</p>
+    <div class="note win"><b>발표 한 문장:</b> "합성을 여러 방식으로, 공개모델·실데이터 보강까지 — <b>가능한 도메인 갭 개선책을 다 돌려 지도를 그렸고</b>, 통한 건 실 in-domain 데이터·조리 특화 음성·시간축이었다."</div>
+  </section>
+
+  <div class="footer">
+    <div><b>/eli5</b> 방식 · 큰 그림 · 적은 글자</div>
+    <div>만든 과정 전체 = <b>docs/MEETING_2026-08-26.md</b></div>
+    <div class="try">/eli5 &lt;주제&gt;</div>
+  </div>
+
+</div>
+
+<script>
+  (function(){
+    var els = document.querySelectorAll('.reveal');
+    if(!('IntersectionObserver' in window)){ els.forEach(function(e){e.classList.add('in')}); return; }
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, {threshold:.16});
+    els.forEach(function(el){ io.observe(el); });
+  })();
+</script>
