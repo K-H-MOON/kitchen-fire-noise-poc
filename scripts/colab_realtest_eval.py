@@ -61,6 +61,8 @@ models = {
     '2df_real_only_grouped_df': f'{IFRUN}/real_only_grouped_df/weights/best.pt',  # D-Fire 실데이터 보강(배찬우 팀원 제안)
     '2y11_real_only_grouped_y11': f'{IFRUN}/real_only_grouped_y11/weights/best.pt',  # yolo11s 베이스(미팅 yolo8/yolo11)
     '2curr_real_only_grouped_curr': f'{IFRUN}/real_only_grouped_curr/weights/best.pt',  # #2 커리큘럼: 합성 사전학습(BASE_YOLO=v8_C0_s1) → 실 파인튜닝
+    '1dr_synth_dr': f'{IFRUN}/synth_dr/weights/best.pt',  # #4 DR-synth-only 앵커(vs 1_synth 0.357): 도메인 랜덤화 합성만
+    '2dr_real_only_grouped_dr': f'{IFRUN}/real_only_grouped_dr/weights/best.pt',  # #4 DR 커리큘럼: DR-synth 사전학습 → 실 파인튜닝
     '2gencurr_real_only_grouped_gencurr': f'{IFRUN}/real_only_grouped_gencurr/weights/best.pt',  # #6 생성형 커리큘럼: gen 사전학습 → 실 파인튜닝(데이터 준비 후)
 }
 
