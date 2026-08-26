@@ -39,7 +39,8 @@ BG_ROOT  = f'{FIRE}/bg'
 FLAME_V1 = f'{FIRE}/flame_matte'
 ATLAS    = '/content/kitchen-fire-poc/assets/flamelib'
 
-BASE_MODE   = os.environ.get('BASE_MODE', 'C3').upper()
+BASE_MODE   = os.environ.get('BASE_MODE', 'C1').upper()   # 기본 C1=atlas+alpha(빠름·전체블러 없음). DR 열화가 도메인 realism 제공 → 무거운 C3 합성 불필요.
+WORK_SIZE   = int(os.environ.get('WORK_SIZE', '640'))     # bg 최대 변 축소(속도↑·저해상 CCTV 도메인 부합·학습도 640). 0=원본 유지.
 TRAIN       = os.environ.get('TRAIN', '1') == '1'
 SYNTH_EPOCHS= int(os.environ.get('SYNTH_EPOCHS', '60'))
 SEED        = int(os.environ.get('SEED', '2'))
@@ -62,6 +63,7 @@ ATLAS_SPLIT = {'v01': 'train', 'v02': 'train', 'v03': 'train', 'v06': 'train',
                'v05': 'test',  'v09': 'test'}
 CFG = {
     'C0': dict(source='v1',    blend='alpha',  feather=False, colorcorr=False, bloom=False, spill=False),
+    'C1': dict(source='atlas', blend='alpha',  feather=False, colorcorr=False, bloom=False, spill=False),  # 빠름(블러 없음)+아틀라스 390 변화
     'C3': dict(source='atlas', blend='screen', feather=True,  colorcorr=True,  bloom=True,  spill=True),
 }[BASE_MODE]
 
@@ -284,7 +286,11 @@ for split in ('train', 'val', 'test'):
 
     n_pos = n_hn = n_neg = 0; vis_list = []; n_fb = 0
     for i, bp in enumerate(bgs):
-        bg = np.asarray(Image.open(bp).convert('RGB')); H, W = bg.shape[:2]
+        bg = np.asarray(Image.open(bp).convert('RGB'))
+        if WORK_SIZE and max(bg.shape[:2]) > WORK_SIZE:      # DR: 작업 해상도 축소(속도·저해상 도메인)
+            s = WORK_SIZE / max(bg.shape[:2])
+            bg = cv2.resize(bg, (max(1, int(bg.shape[1] * s)), max(1, int(bg.shape[0] * s))), interpolation=cv2.INTER_AREA)
+        H, W = bg.shape[:2]
         r = rng_role.random()
         role = ('pos' if (r < POS_FRAC and sprites) else
                 'hardneg' if r < POS_FRAC + HARDNEG_FRAC else 'neg')
@@ -311,6 +317,8 @@ for split in ('train', 'val', 'test'):
         open(f'{lab_dir}/{name}.txt', 'w').write(label)
         if box and len(qc) < 12 and split != 'val':
             qc.append((split, bg.copy(), box))                     # 열화 후 이미지+박스(정합 확인)
+        if (i + 1) % 300 == 0:
+            print(f'    {i+1}/{len(bgs)} …')                       # 진행 표시(멈춤/진행 확인)
 
     ni = len(glob.glob(f'{img_dir}/*.jpg')); nl = len(glob.glob(f'{lab_dir}/*.txt'))
     ok = ni == nl == len(bgs)
