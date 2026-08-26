@@ -25,6 +25,10 @@
 import os, glob, json, zipfile, shutil, subprocess, sys
 import numpy as np
 
+# 엣지/소벨 전처리(#3) — 학습·평가 공유 단일 소스(scripts/edge_preproc.py). __file__ 디렉터리 우선.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, '/content/kitchen-fire-noise-poc/scripts')   # %run 폴백(클론 경로)
+
 try:
     from google.colab import drive
     drive.mount('/content/drive')
@@ -65,7 +69,25 @@ HN_TAG     = os.environ.get('HN_TAG', 'hn')             # 접미사(§F=hn · �
 DFIRE_DIR  = os.environ.get('DFIRE_DIR', '')            # D-Fire 실데이터 주입(배찬우 팀원 제안 보강) → 모델명 _df. '' = 미사용
 BASE_YOLO  = os.environ.get('BASE_YOLO', 'yolov8s.pt')  # 학습 베이스 아키텍처(기본 v8s). 예: yolo11s.pt
 BASE_TAG   = os.environ.get('BASE_TAG', '')             # 베이스 태그(모델명 접두). 예: yolo11 → 'y11' → real_only_grouped_y11
-SUF        = (f'_{BASE_TAG}' if BASE_TAG else '') + ('_df' if DFIRE_DIR else '') + (f'_{HN_TAG}' if HARDNEG else '')
+EDGE_MODE  = os.environ.get('EDGE_MODE', '').strip()    # #3 엣지 전처리: ''=off · sobelb/blend/edgegray. 모델명 _edge_<mode>
+EDGE_GAIN  = float(os.environ.get('EDGE_GAIN', '0.5'))
+EDGE_ALPHA = float(os.environ.get('EDGE_ALPHA', '0.4'))
+if EDGE_MODE:
+    from edge_preproc import edge_transform_file, edge_suffix, MODES
+    assert EDGE_MODE in MODES, f'EDGE_MODE={EDGE_MODE!r} 무효 (택1: {MODES})'
+    print(f'[EDGE] 전처리 ON: mode={EDGE_MODE} gain={EDGE_GAIN} alpha={EDGE_ALPHA} '
+          f'→ train·valid·test·주입(hardneg/dfire) 전부 동일 변환. 모델명 접미사 {edge_suffix(EDGE_MODE)}')
+SUF        = (f'_{BASE_TAG}' if BASE_TAG else '') + ('_df' if DFIRE_DIR else '') \
+             + (f'_{HN_TAG}' if HARDNEG else '') + (edge_suffix(EDGE_MODE) if EDGE_MODE else '')
+
+def _place_image(src, dst):
+    """이미지 배치: EDGE_MODE 시 엣지 전처리 사본 기록, 아니면 원본 심링크(기존 동작)."""
+    if EDGE_MODE:
+        if not os.path.exists(dst):
+            edge_transform_file(src, dst, EDGE_MODE, EDGE_GAIN, EDGE_ALPHA)
+    else:
+        if not os.path.exists(dst):
+            os.symlink(os.path.realpath(src), dst)
 
 os.makedirs(OUT, exist_ok=True)
 if not os.path.isdir(RAW) or not os.listdir(RAW):
@@ -226,8 +248,7 @@ for i, r in enumerate(recs):
     os.makedirs(di, exist_ok=True); os.makedirs(dl, exist_ok=True)
     name = os.path.basename(r['img']); stem = os.path.splitext(name)[0]
     dst = f'{di}/{name}'
-    if not os.path.exists(dst):
-        os.symlink(r['img'], dst)
+    _place_image(r['img'], dst)
     lines = []
     if os.path.exists(r['label']):
         lines = [l for l in open(r['label']) if l.split() and l.split()[0] == '0']
@@ -242,8 +263,7 @@ if HARDNEG:
     for p in sorted(glob.glob(f'{HN_TRAIN}/*.jpg')):
         name = 'hn_' + os.path.basename(p)
         dst = f'{NEW}/train/images/{name}'
-        if not os.path.exists(dst):
-            os.symlink(os.path.realpath(p), dst)
+        _place_image(p, dst)
         open(f'{NEW}/train/labels/{os.path.splitext(name)[0]}.txt', 'w').close()   # 0바이트 = 음성
         hn += 1
     print(f'[HARDNEG] 하드네거 {hn}장 그룹-train 주입 (mixed 도 상속)')
@@ -257,8 +277,7 @@ if DFIRE_DIR:
         name = 'df_' + os.path.basename(p)
         stem = os.path.splitext(name)[0]
         dst = f'{NEW}/train/images/{name}'
-        if not os.path.exists(dst):
-            os.symlink(os.path.realpath(p), dst)
+        _place_image(p, dst)
         lp = f'{DFIRE_DIR}/labels/{os.path.splitext(os.path.basename(p))[0]}.txt'
         lines = open(lp).readlines() if os.path.exists(lp) else []
         open(f'{NEW}/train/labels/{stem}.txt', 'w').writelines(lines)
@@ -290,8 +309,7 @@ def build_mixed_grouped():
                     f'{dl}/{os.path.splitext(n)[0]}.txt')
     for p in glob.glob(f'{SYN_TRAIN}/images/*.jpg'):
         n = 'sy_' + os.path.basename(p)
-        if not os.path.exists(f'{di}/{n}'):
-            os.symlink(p, f'{di}/{n}')
+        _place_image(p, f'{di}/{n}')   # 합성도 EDGE 시 동일 변환(NEW 이미지는 이미 변환됨→symlink 대신 안전)
         lp = f'{SYN_TRAIN}/labels/{os.path.splitext(os.path.basename(p))[0]}.txt'
         open(f'{dl}/{os.path.splitext(n)[0]}.txt', 'w').write(open(lp).read() if os.path.exists(lp) else '')
     for sp in ('valid', 'test'):
@@ -302,8 +320,9 @@ def build_mixed_grouped():
         f"path: {MIX}\ntrain: train/images\nval: valid/images\ntest: test/images\nnc: 1\nnames: ['fire']\n")
     return f'{MIX}/data.yaml'
 
-models = {'1_synth_only': f'{RUNS}/{BASE_MODEL}/best.pt',
-          '2_real_only': train('real_only_grouped' + SUF, f'{NEW}/data.yaml')}
+models = {'2_real_only': train('real_only_grouped' + SUF, f'{NEW}/data.yaml')}
+if not EDGE_MODE:   # 합성앵커는 RGB 학습 → 엣지 test 서 비교 무의미. EDGE 시 real_only(엣지)만.
+    models['1_synth_only'] = f'{RUNS}/{BASE_MODEL}/best.pt'
 if EVAL_MIXED:
     models['3_mixed'] = train('mixed_grouped' + SUF, build_mixed_grouped())
 

@@ -10,16 +10,52 @@
 
 **#4 도메인 랜덤화 ✅완료=커리큘럼 무기여·합성단독만 개선(2026-08-26):** 신규 [`colab_synth_dr.py`](../scripts/colab_synth_dr.py)(colab_synth 코어 재사용 + DR층[넓은 스케일/위치·불꽃색 지터·실 CCTV 열화 저해상/grain/blur/jpeg·박스보존만]·BASE_MODE 기본 C1·WORK_SIZE 640·로컬 /content 출력·진행표시·synth_DR 파괴가드). **2dr 0.813/0.848/fpr 0.265 ≈ 2g 0.813/0.846/0.260(무기여·무해) · 1dr(DR-synth-only) 0.518 > 1_synth(C0) 0.357(12/16장면 broad↑)=합성단독 첫 개선.** 단 원인미분리(DR열화 vs atlas 불꽃 vs 넓은배치)·conf미매칭(능력 vs 운영점)·1-seed·sc14 여전 0. §2·§6.2·§6.3 기록.
 
-**★★즉시 다음 = #3 엣지/소벨 (사용자 "돌리자" 승인 · 스크립트 아직 미작성):**
-- 설계: 이미지에 **엣지(소벨) 채널 전처리** → 학습 → eval. 색 기반 헛불(불색 음식) 감소 검증. #2/#4보다 배관 큼 — **train·Indoor·oilfire_realtest 전부에 일관 전처리** 필요. 사전확률 낮음(색 빼면 불색 정의 손실·recall 리스크, 단 낮은 사전확률=스킵 사유 아님·map 완성용).
-- 구현안: 3ch 유지하며 한 채널을 소벨로 교체 or RGB+edge 블렌드(4ch 수술 회피)가 저위험. eval에 `2edge`(가칭) 행 추가.
-- **★ 새 세션 첫 명령 예: "#3 엣지/소벨 스크립트 작성해줘 — 엣지 채널 전처리→학습→eval. 오류·누락 재검토 후 Colab 레시피까지."**
+**★★즉시 다음 = #3 엣지/소벨 ✅스크립트 작성 완료(2026-08-27, 미실행 — Colab 학습·eval 대기):**
+- 신규 [`edge_preproc.py`](../scripts/edge_preproc.py) = **학습·평가 공유 단일 소스**(변환 드리프트=실험 오염 방지). 3ch 유지·4ch 수술 회피. 3모드(env `EDGE_MODE`):
+  - `sobelb` = B채널만 소벨 엣지로 교체(R·G=불 난색 보존)·**recall 리스크 최저·1순위** · `blend` = RGB 전부 보존+엣지 α덧입힘(2순위) · `edgegray` = 순수 소벨(색 제거·리스크 최대·지도 완성용).
+  - env: `EDGE_GAIN`(소벨 스케일 0.5)·`EDGE_ALPHA`(blend 0.4)·고정 스케일(프레임의존 min-max 회피=train/eval 일치).
+- 학습 = [`colab_indoorfire_split_audit.py`](../scripts/colab_indoorfire_split_audit.py)에 `EDGE_MODE` 추가: NEW(train·valid·test)·hardneg·dfire·mixed-synth **전부 동일 변환**(원본 symlink 대신 엣지 jpg 기록). dHash 그룹핑은 원본 기준(무영향). 모델명 `real_only_grouped_edge_<mode>`. 합성앵커(RGB)는 EDGE 시 self-eval서 제외.
+- 평가 = [`colab_realtest_eval.py`](../scripts/colab_realtest_eval.py)에 `EDGE_MODE` 추가: fire/조리/발화전 test 를 **같은 jpg 파이프라인**으로 변환(`{OUT_DIR}_edge_<mode>`) 후 `2edge_<mode>` 행만 측정(RGB 모델을 엣지 test 에 얹으면 무의미). baseline 2g 는 EDGE 끈 실행에서 나란히. json `oilfire_realtest_eval_edge_<mode>.json`.
+- ⚠️ 경계(기록): YOLO 기본 HSV aug 는 엣지채널에도 적용됨(무해·타 실험과 동일 유지) · `{OUT_DIR}_edge_*` 캐시라 gain/alpha 바꾸면 그 폴더 삭제 후 재실행 · 1순위 sobelb 결과 보고 blend/edgegray 진행 · sobelb 유망 시 edge+ck(조리네거) 후속.
+- **Colab 레시피** ↓ ("#3 엣지 재현").
 
 **#6 생성형 (수집 중·병행):** 도구 **Nano Banana Pro(사비 ₩29,000·~70장/일)+Codex(GPT image) 2개**(다른 attractor로 다양성·비율 5:5 불필요·9:1 지배만 아니면·효과 미비 시 SD/Flux/Grok/Ideogram 3번째). [`gen_prompts.md`](gen_prompts.md) 필드템플릿(고정 도메인앵커 + 변주 슬롯·소40중40대20·유류불 판별 `oil/grease fire from the oil surface`·near-dupe 방지). 1×2 그리드→[`slice_grid.py`](../scripts/slice_grid.py)→2배·단일 그대로. 수집물=OneDrive 생성이미지 폴더(MEETING §5 링크). **검수 TODO(다 모으면 폴더째): 몽타주+크로스체크. NB top폴더 "CRT 모니터 찍은 사진"(2단 세로스택·off-domain·가로슬라이스 불가) 제외 · 중복파일 · 그리드/단일 분리.** 데이터 준비되면 gen 빌더 + 커리큘럼(BASE만 gen모델로 교체) + eval `2gencurr` vs 2g.
 
 **#4/#6 커리큘럼 Colab 재현(모델은 Drive 생존):** ⓐ 재clone(fire-noise + fire-poc 아틀라스) ⓑ(#4) `colab_synth_dr.py` TRAIN=0 QC(_check_dr.jpg)→TRAIN=1 학습→runs_if/synth_dr ⓒ split_audit `BASE_YOLO=…/synth_dr/weights/best.pt`·`BASE_TAG=dr`→real_only_grouped_dr ⓓ **eval 전 test 재빌드 필수(아래 "A안 재현" §셀1~2)** → `colab_realtest_eval.py`(1dr·2dr·2curr·2gencurr 행).
 
 **재현/함정(불변):** /content 세션소멸→재빌드 한 세션 연속 · Drive FUSE 끊김→`force_remount=True` · 모델은 Drive `runs_if` 저장(생존) · `%run -i`는 RANGES 파이썬변수용 · **eval은 test(oilfire_realtest) 재빌드 후에만**(안 하면 "양성 없음" AssertionError — 이 세션 실제 발생).
+
+### #3 엣지 재현 (한 세션·순서대로 · L4)
+
+```python
+# (0) 재clone
+!rm -rf /content/kitchen-fire-noise-poc && git clone -q https://github.com/K-H-MOON/kitchen-fire-noise-poc.git /content/kitchen-fire-noise-poc
+import os
+
+# (1) 엣지 모델 학습 — Indoor 그룹분할 + 엣지 전처리(train·valid·test 동일 변환) · ~40분
+os.environ['EDGE_MODE']='sobelb'          # 1순위. 뒤에 'blend'·'edgegray' 로 반복(지도 완성)
+os.environ['EDGE_GAIN']='0.5'; os.environ['EDGE_ALPHA']='0.4'
+for k in ('HARDNEG','DFIRE_DIR','BASE_TAG','BASE_YOLO'): os.environ.pop(k, None)  # 잔여 env 청소
+os.environ['EVAL_MIXED']='0'
+%run /content/kitchen-fire-noise-poc/scripts/colab_indoorfire_split_audit.py
+# → runs_if/real_only_grouped_edge_sobelb/weights/best.pt  (+ Indoor 엣지 self-eval = "엣지로도 불 배우나" sanity)
+
+# (2) oilfire_realtest 재빌드 필수 (세션 소멸 시). 이미 이 세션에 있으면 생략.
+#     → 위 "A안 재현 레시피" (1)(2) 셀 그대로 실행 (RANGES + FIRE_CAP=40, %run -i).
+
+# (3) 엣지 모델 평가 — test 3종을 동일 엣지 변환 후 2edge 측정
+os.environ['OUT_DIR']='/content/oilfire_realtest'; os.environ['EVAL_OUT']='/content'
+os.environ['EDGE_MODE']='sobelb'          # (1)과 동일 mode·gain·alpha
+%run /content/kitchen-fire-noise-poc/scripts/colab_realtest_eval.py
+# → oilfire_realtest_eval_edge_sobelb.json  (2edge_sobelb 행: recall·scene·fpr_급식실·fpr_발화전)
+
+# (4) baseline 비교 — EDGE 끄고 RGB 모델(2g/2ck…) 같은 test 재측정 → 2edge vs 2g 나란히
+os.environ['EDGE_MODE']=''
+%run /content/kitchen-fire-noise-poc/scripts/colab_realtest_eval.py
+# 판정: fpr_급식실 ↓(색-헛불 감소) & recall 유지 → 엣지 유효 / recall 급락 → 색 정보 손실(사전확률대로)
+```
+- **판정 기준**: sobelb 가 2g 대비 **fpr_급식실↓ & scene recall 유지**면 색-헛불 가설 지지(→ edge+ck 후속). recall 만 떨어지면 "색 빼면 불색 정의 손실" 실증(map 에 ❌ 기록). blend/edgegray 로 스펙트럼 완성.
+- gain/alpha 튜닝 시 `/content/oilfire_realtest_edge_<mode>` 캐시폴더 삭제 후 (3) 재실행.
 
 ---
 

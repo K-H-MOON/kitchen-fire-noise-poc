@@ -11,6 +11,10 @@
 import os, glob, json, subprocess, sys
 import numpy as np
 from google.colab import drive
+
+# 엣지/소벨 전처리(#3) — 학습과 동일한 scripts/edge_preproc.py 를 공유(변환 일치 보장).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, '/content/kitchen-fire-noise-poc/scripts')   # %run 폴백
 try:
     from ultralytics import YOLO
 except ImportError:
@@ -29,6 +33,10 @@ COOK_TEST_DIR = os.environ.get('COOK_TEST_DIR', f'{TEST}/nofire_kitchen')
 #   기본 빈값 → 기존 동작 불변. 제외 기준=불 가리는 비-배포 아티팩트만(체리피킹 금지).
 COMPROMISED = {s for s in os.environ.get('COMPROMISED_SCENES', '').split(',') if s}
 PRESRC_DROP = {s for s in os.environ.get('PRESRC_DROP', '').split(',') if s}
+# #3 엣지 전처리: 설정 시 fire/조리/발화전 test 를 학습과 동일 변환 → 엣지 모델(2edge)만 측정.
+EDGE_MODE  = os.environ.get('EDGE_MODE', '').strip()
+EDGE_GAIN  = float(os.environ.get('EDGE_GAIN', '0.5'))
+EDGE_ALPHA = float(os.environ.get('EDGE_ALPHA', '0.4'))
 
 drive.mount('/content/drive')
 os.makedirs(OUT, exist_ok=True)
@@ -51,6 +59,26 @@ if PRESRC_DROP:
     print(f'[PRESRC_DROP] {sorted(PRESRC_DROP)} 제외(오라벨) → nofire_presrc {_n0} → {len(pre_imgs)}')
 
 
+# #3 엣지 전처리: test 3종을 학습과 동일한 jpg 파이프라인으로 변환(디스크 사본) → 경로 교체.
+if EDGE_MODE:
+    from edge_preproc import edge_transform_file, edge_suffix, MODES
+    assert EDGE_MODE in MODES, f'EDGE_MODE={EDGE_MODE!r} 무효 (택1: {MODES})'
+    _base = f'{TEST}_edge_{EDGE_MODE}'
+    def _prep(paths, sub):
+        d = f'{_base}/{sub}'; os.makedirs(d, exist_ok=True)
+        out = []
+        for p in paths:
+            q = f'{d}/{os.path.basename(p)}'
+            if not os.path.exists(q):
+                edge_transform_file(p, q, EDGE_MODE, EDGE_GAIN, EDGE_ALPHA)
+            out.append(q)
+        return out
+    fire_imgs = _prep(fire_imgs, 'fire')
+    cook_imgs = _prep(cook_imgs, 'nofire_kitchen') if cook_imgs else []
+    pre_imgs  = _prep(pre_imgs, 'nofire_presrc') if pre_imgs else []
+    print(f'[EDGE] {EDGE_MODE} 전처리본 → {_base} (fire {len(fire_imgs)}·조리 {len(cook_imgs)}·발화전 {len(pre_imgs)})')
+
+
 models = {
     '1_synth (v8_C0_s1)':      f'{RUNS}/v8_C0_s1/best.pt',
     '2_real_only':             f'{IFRUN}/real_only/weights/best.pt',
@@ -65,6 +93,11 @@ models = {
     '2dr_real_only_grouped_dr': f'{IFRUN}/real_only_grouped_dr/weights/best.pt',  # #4 DR 커리큘럼: DR-synth 사전학습 → 실 파인튜닝
     '2gencurr_real_only_grouped_gencurr': f'{IFRUN}/real_only_grouped_gencurr/weights/best.pt',  # #6 생성형 커리큘럼: gen 사전학습 → 실 파인튜닝(데이터 준비 후)
 }
+
+# #3 엣지: 엣지 모델은 엣지 test 에서만 유효(RGB 모델을 엣지 test 에 얹으면 무의미) →
+#   EDGE_MODE 시 2edge 행만 측정. RGB 모델들의 baseline(2g 등)은 EDGE_MODE 미설정 실행에서 얻어 나란히 비교.
+if EDGE_MODE:
+    models = {f'2edge_{EDGE_MODE}': f'{IFRUN}/real_only_grouped_edge_{EDGE_MODE}/weights/best.pt'}
 
 
 def detected(model, paths):
@@ -131,8 +164,10 @@ print('\n해석: recall↑=실화재 잘 잡음 · fpr_급식실↓=실제 조�
 print('경계: frame-level(위치 무시·관대) · 장면 N 작음(CI 큼) · 저해상 다수 · 급식실 근접(실 급식실 화재 아님).')
 print('판정: 현재 모델(2g)이 이미 recall 높고 fpr_급식실 낮으면 → fine-tune 불요 가능. 낮으면 → ⑤ fine-tune 근거.')
 
+_jsuf = f'_edge_{EDGE_MODE}' if EDGE_MODE else ''
 json.dump({'conf': CONF, 'n_fire': len(fire_imgs), 'n_cook': len(cook_imgs), 'n_pre': len(pre_imgs),
+           'edge_mode': EDGE_MODE, 'edge_gain': EDGE_GAIN, 'edge_alpha': EDGE_ALPHA,
            'compromised_scenes': sorted(COMPROMISED), 'presrc_drop': sorted(PRESRC_DROP),
-           'rows': rows}, open(f'{OUT}/oilfire_realtest_eval.json', 'w'),
+           'rows': rows}, open(f'{OUT}/oilfire_realtest_eval{_jsuf}.json', 'w'),
           ensure_ascii=False, indent=1, default=float)
-print(f'\n-> {OUT}/oilfire_realtest_eval.json')
+print(f'\n-> {OUT}/oilfire_realtest_eval{_jsuf}.json')
