@@ -44,7 +44,7 @@ TRAIN       = os.environ.get('TRAIN', '1') == '1'
 SYNTH_EPOCHS= int(os.environ.get('SYNTH_EPOCHS', '60'))
 SEED        = int(os.environ.get('SEED', '2'))
 DR          = float(os.environ.get('DR_STRENGTH', '1.0'))
-OUT         = f'{FIRE}/synth_DR'
+OUT         = os.environ.get('SYNTH_DR_OUT', '/content/synth_DR')   # 기본=로컬(빠름·세션스코프). Drive 원하면 env 로 지정.
 
 # --- 기존 합성 상수(colab_synth.py 와 동일 개념) + DR 확대 범위 ---
 POS_FRAC      = 0.60
@@ -258,8 +258,8 @@ if CFG['source'] == 'atlas' and not glob.glob(f'{ATLAS}/*.webp'):
 if CFG['source'] == 'v1' and not os.path.isdir(FLAME_V1):
     raise SystemExit(f'{FLAME_V1} 없음 — colab_extract_flames.py 먼저')
 
-# 파괴삭제 가드(script-safety): OUT 이 반드시 synth_DR 이고 FIRE 하위일 때만 rmtree.
-assert OUT == f'{FIRE}/synth_DR' and 'synth_DR' in OUT, f'안전가드: 예상치 못한 OUT={OUT}'
+# 파괴삭제 가드(script-safety): OUT 바구니 이름에 반드시 'synth_DR' 포함일 때만 rmtree.
+assert 'synth_DR' in os.path.basename(OUT.rstrip('/\\')), f'안전가드: 예상치 못한 OUT={OUT}'
 shutil.rmtree(OUT, ignore_errors=True)
 try:
     F = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 20)
