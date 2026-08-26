@@ -62,8 +62,10 @@ SYN_TRAIN  = f'{FIRE}/synth_{SYN_COND}/train'
 HARDNEG    = os.environ.get('HARDNEG', '0') == '1'      # 하드네거 주입(헛불 고치기) → 모델명 _<HN_TAG>
 HN_TRAIN   = os.environ.get('HARDNEG_TRAIN_DIR', f'{FIRE}/oilfire_hardneg_train/nofire')
 HN_TAG     = os.environ.get('HN_TAG', 'hn')             # 접미사(§F=hn · 급식실조리=ck 등, 모델 덮어쓰기 방지)
-DFIRE_DIR  = os.environ.get('DFIRE_DIR', '')            # D-Fire 실데이터 주입(배찬우 제안 보강) → 모델명 _df. '' = 미사용
-SUF        = ('_df' if DFIRE_DIR else '') + (f'_{HN_TAG}' if HARDNEG else '')
+DFIRE_DIR  = os.environ.get('DFIRE_DIR', '')            # D-Fire 실데이터 주입(배찬우 팀원 제안 보강) → 모델명 _df. '' = 미사용
+BASE_YOLO  = os.environ.get('BASE_YOLO', 'yolov8s.pt')  # 학습 베이스 아키텍처(기본 v8s). 예: yolo11s.pt
+BASE_TAG   = os.environ.get('BASE_TAG', '')             # 베이스 태그(모델명 접두). 예: yolo11 → 'y11' → real_only_grouped_y11
+SUF        = (f'_{BASE_TAG}' if BASE_TAG else '') + ('_df' if DFIRE_DIR else '') + (f'_{HN_TAG}' if HARDNEG else '')
 
 os.makedirs(OUT, exist_ok=True)
 if not os.path.isdir(RAW) or not os.listdir(RAW):
@@ -268,9 +270,9 @@ if DFIRE_DIR:
 # 재학습
 # ---------------------------------------------------------------------------
 def train(name, data_yaml):
-    print(f'\n=== 재학습: {name} (epochs {EPOCHS}) ===')
-    YOLO('yolov8s.pt').train(data=data_yaml, epochs=EPOCHS, imgsz=640, patience=15,
-                             project=PROJ, name=name, exist_ok=True, verbose=False, plots=False)
+    print(f'\n=== 재학습: {name} (base {BASE_YOLO} · epochs {EPOCHS}) ===')
+    YOLO(BASE_YOLO).train(data=data_yaml, epochs=EPOCHS, imgsz=640, patience=15,
+                          project=PROJ, name=name, exist_ok=True, verbose=False, plots=False)
     return f'{PROJ}/{name}/weights/best.pt'
 
 # mixed 재학습(선택): synth 를 재분할 train 에 더함
