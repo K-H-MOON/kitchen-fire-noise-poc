@@ -4,7 +4,11 @@
 
 **★기준 문서 = [`docs/MEETING_2026-08-26.md`](MEETING_2026-08-26.md)** (README 최상단). 도메인갭 지도(§2)·검수반영(§4)·피드백 선별(§5)·방안(§6.2)·실험로그(§6.3)·생성형 설계+`gen_prompts.md`(§6.4)·서사(§7)·지양(§8). **★작업 원칙: 단정 금지(확정/시사/미확정, 미확정="해봐야 안다" [[no-premature-conclusions]])·env 고유·rmtree 가드([[script-safety-env-destructive]])·과대해석 금지(이번 세션 재검토 다수서 반복 지적).**
 
-**★★즉시 다음 = #6 생성형 합성 (도메인 매칭 데이터 = 남은 유일 실제 레버):** #3까지 표현축 다 닫음(아래). #6 = **Nano Banana Pro + Codex(GPT image)**로 급식실 CCTV 유류불 생성 → 커리큘럼(gen 사전학습→실 파인튜닝) → eval `2gencurr` vs 2g. **다음 세션 작업(§6.4 ⓐ~ⓒ):** ⓐ **gen 데이터 빌더**(OneDrive 수집물→YOLO셋·하위폴더 재귀·폴더명 접두로 파일충돌 방지) ⓑ **커리큘럼**(`BASE_YOLO`=gen-synth 학습모델 → split_audit → `real_only_grouped_gencurr`, 배관은 #2로 검증됨) ⓒ **eval에 `2gencurr` 추가 → 2g 대조**(판정 2gencurr ≈/>/< 2g). 슬라이스=`slice_grid.py`(1×2그리드). **데이터=OneDrive 생성이미지 폴더(§5 링크)·검수 TODO(폴더째 몽타주+크로스체크·NB top 모니터사진 제외).** **미확정=이미지 좋음은 필요조건일 뿐 전이개선은 측정해야 앎.**
+**★★즉시 다음 = #6 생성형 합성 (도메인 매칭 데이터 = 남은 유일 실제 레버):** #3까지 표현축 다 닫음(아래). #6 = **Nano Banana Pro + Codex(GPT image)**로 급식실 CCTV 유류불 생성 → 커리큘럼(gen 사전학습→실 파인튜닝) → eval `2gencurr` vs 2g.
+
+**배관 3요소 ✅완비(2026-08-27, 코드만·미실행):** ⓐ **gen 데이터 빌더 = 신규 [`colab_gen_build.py`](../scripts/colab_gen_build.py)** — Roboflow YOLO export(이미지+라벨) 재귀 수집·폴더명 접두 충돌방지·클래스 전부 0(fire) 강제·라벨없는 이미지 기본 제외(fire→배경 유해 방지, `GEN_KEEP_UNLABELED`로 음성 포함 가능)·시드 train/val 분할·QC시트(`_check_gen.jpg` 박스 정합 육안)·파괴가드('gen_synth' 이름)·unique env(`GEN_SRC/GEN_OUT/GEN_EPOCHS…`) → `TRAIN=1`이면 yolov8s 사전학습 → **`runs_if/gen_synth/weights/best.pt`**(=커리큘럼 BASE). 로컬서 핵심로직(페어링·접두·클래스remap·__MACOSX무시·분할) 단위테스트 통과. ⓑ **커리큘럼 = split_audit 재사용**(신규코드 0): `BASE_YOLO=…/gen_synth/best.pt`·`BASE_TAG=gencurr` → `real_only_grouped_gencurr`(배관 #2·#4로 검증됨). ⓒ **eval = `2gencurr` 행 이미 존재**([`colab_realtest_eval.py`](../scripts/colab_realtest_eval.py) L94·모델 생기면 자동 대조). 재현 레시피 = 아래 "#6 생성형 재현".
+
+**⛔남은 유일 블로커 = Roboflow 박싱(수동):** 생성 이미지는 수집됨(OneDrive `생성 이미지`: Codex 57 + NB 21 · 데스크톱 `gen_fire.zip`: QA큐레이션 `random_50_strict`[소20중20대10·near-dup 0]) **그러나 YOLO 라벨(.txt) 전무 = 아직 박스 안 침.** #6은 박스 없이 학습 불가 — 자동박싱은 실험오염이라 안 함. **다음 = ①(1×2 그리드면) `slice_grid.py` → ②Roboflow 수동 박스(fire) → ③YOLO export(zip) Drive 업로드 → ④`colab_gen_build.py` 실행 → 커리큘럼 → eval.** **미확정=이미지 좋음은 필요조건일 뿐, 전이개선(2gencurr ≈/>/< 2g)은 측정해야 앎(단정 금지).** 데이터=OneDrive 생성이미지 폴더(§5 링크)·검수 TODO(폴더째 몽타주+크로스체크·NB top 모니터사진 제외).
 
 **참고(eli5 요약본 규칙·[[kitchen-fire-noise-poc]] 메모):** "eli5 요약본"=**eli5 스킬판 `docs/eli5-journey.html`(다크·아티팩트 1d3be5f7)**. 내 흉내판 `docs/eli5-summary.html`(라이트·아티팩트 c2032af8)과 **혼동 금지**·흉내판은 대조용 의도적 보존(삭제 금지). ⚠️eli5-journey.html 로컬 미커밋(GitHub엔 흉내판만·README도 흉내판 링크). 렌더=GitHub는 .html을 코드로 보여줌→아티팩트 링크나 GitHub Pages 필요. **정리는 사용자 지시 대기.**
 
@@ -104,6 +108,41 @@ os.environ['OUT_DIR']='/content/oilfire_realtest'; os.environ['EVAL_OUT']='/cont
 - **(a) 판정**: recall_scene 매칭 지점서 엣지 fpr < 2g면 win(단 **1-seed·다중비교라 "유망"까지·seed 재현 필요**).
 - **(d) 판정**: gray 조리 fpr **내리면 색(hue)이 조리 헛불 주범**(색-강건 대책 유효)·**유지되면 밝기/구조가 주범**(색 대책 무의미). gray는 recall 하락 예상 → (d-3) conf sweep로 recall-matched 확인.
 - 캐시: `{OUT_DIR}_edge_<mode>`는 eval 이 만든 것 재사용(동일 이미지) → confsweep conf0.25 가 eval 과 일치해야 sanity.
+
+### #6 생성형 재현 (한 세션·순서대로 · L4) — **선행: Roboflow 박스+export 필수**
+
+```python
+# (0) 재clone
+!rm -rf /content/kitchen-fire-noise-poc && git clone -q https://github.com/K-H-MOON/kitchen-fire-noise-poc.git /content/kitchen-fire-noise-poc
+import os
+
+# (선행·1회) 생성 이미지 → (1×2 그리드면) slice_grid.py 로 슬라이스 → Roboflow 수동 박스(fire)
+#   → YOLO export(zip) → Drive 업로드: /content/drive/MyDrive/fire_frames/gen_export (폴더 또는 .zip)
+#   ※ 라벨(.txt) 없으면 학습 불가. 자동박싱 안 함(실험오염).
+
+# (1) gen 데이터셋 빌드 + gen-only 사전학습 → runs_if/gen_synth/best.pt · ~30분
+os.environ['GEN_SRC']='/content/drive/MyDrive/fire_frames/gen_export'   # 폴더 또는 .zip
+os.environ['TRAIN']='1'                                                 # 0=데이터셋만(QC 먼저 보고 싶을 때)
+%run /content/kitchen-fire-noise-poc/scripts/colab_gen_build.py
+# → gen_synth/_check_gen.jpg (녹색 박스 정합 육안) · runs_if/gen_synth/weights/best.pt
+
+# (2) oilfire_realtest 재빌드 필수(세션 소멸 시) — 위 "A안 재현" (1)(2) 셀. 있으면 생략.
+
+# (3) 커리큘럼 — gen 앵커로 실 파인튜닝(split_audit 재사용·신규코드 0) · ~40분
+os.environ['BASE_YOLO']='/content/drive/MyDrive/fire_frames/runs_if/gen_synth/weights/best.pt'
+os.environ['BASE_TAG']='gencurr'
+for k in ('HARDNEG','DFIRE_DIR','EDGE_MODE'): os.environ.pop(k, None)
+os.environ['EVAL_MIXED']='0'
+%run -i /content/kitchen-fire-noise-poc/scripts/colab_indoorfire_split_audit.py
+# → runs_if/real_only_grouped_gencurr/weights/best.pt (+ 과적합 리포트 best=ep? 확인)
+
+# (4) eval — 2gencurr 행 vs 2g 나란히
+os.environ['OUT_DIR']='/content/oilfire_realtest'; os.environ['EVAL_OUT']='/content'
+%run /content/kitchen-fire-noise-poc/scripts/colab_realtest_eval.py
+# → oilfire_realtest_eval.json 의 2gencurr vs 2g (recall·scene·fpr_급식실·sc14)
+```
+- **판정**: 2gencurr 가 2g 대비 fpr_급식실↓ & recall 유지(특히 sc14↑)면 gen 커리큘럼 유효 / ≈2g면 무기여(#2·#4처럼) / recall↓면 gen 사전학습이 실 초기화 해침. **1-seed·conf 미매칭이면 "유망/미확정"까지** — 필요시 seed 재현·conf sweep. **단정 금지: 이미지 품질 좋아도 전이는 측정으로만 앎.**
+- 캐시/함정: gen_build 는 `GEN_OUT`(기본 `/content/gen_synth`) 로컬 → 세션 소멸 시 (1) 재실행. 모델(gen_synth·gencurr)은 Drive `runs_if` 생존. `gen_export` 갱신(박스 추가) 시 (1)부터 재실행.
 
 ---
 
