@@ -1,10 +1,14 @@
 # HANDOFF — 다음 세션 이어가기 (2026-08-27 갱신)
 
-## ▶▶▶ 새 세션 즉시 작업 (2026-08-27 · #3 엣지/소벨 + #6 생성형 수집)
+## ▶▶▶ 새 세션 즉시 작업 (2026-08-27 갱신 · #3 ✅종결 → **#6 생성형이 즉시 다음**)
 
-**★기준 문서 = [`docs/MEETING_2026-08-26.md`](MEETING_2026-08-26.md)** (README 최상단). 도메인갭 지도(§2)·검수반영(§4)·피드백 선별(§5)·방안(§6.2)·실험로그(§6.3)·생성형 설계+`gen_prompts.md`(§6.4)·서사(§7)·지양(§8). **★작업 원칙: 단정 금지(확정/시사/미확정, 미확정="해봐야 안다" [[no-premature-conclusions]])·env 고유·rmtree 가드([[script-safety-env-destructive]]).**
+**★기준 문서 = [`docs/MEETING_2026-08-26.md`](MEETING_2026-08-26.md)** (README 최상단). 도메인갭 지도(§2)·검수반영(§4)·피드백 선별(§5)·방안(§6.2)·실험로그(§6.3)·생성형 설계+`gen_prompts.md`(§6.4)·서사(§7)·지양(§8). **★작업 원칙: 단정 금지(확정/시사/미확정, 미확정="해봐야 안다" [[no-premature-conclusions]])·env 고유·rmtree 가드([[script-safety-env-destructive]])·과대해석 금지(이번 세션 재검토 다수서 반복 지적).**
 
-**도메인갭 지도 현황(§2):** ❌ 못닫음 = 불꽃(v2)·표현(v3)·혼합·**#2커리큘럼**·**#4도메인랜덤화**·yolo11·공개모델·D-Fire / ✅ 닫음 = 실 in-domain 데이터·조리 하드네거(⑤)·시간축·per-site. **병목 = 도메인 매칭(데이터양·모델·불꽃품질 아님).**
+**★★즉시 다음 = #6 생성형 합성 (도메인 매칭 데이터 = 남은 유일 실제 레버):** #3까지 표현축 다 닫음(아래). #6 = **Nano Banana Pro + Codex(GPT image)**로 급식실 CCTV 유류불 생성 → 커리큘럼(gen 사전학습→실 파인튜닝) → eval `2gencurr` vs 2g. **다음 세션 작업(§6.4 ⓐ~ⓒ):** ⓐ **gen 데이터 빌더**(OneDrive 수집물→YOLO셋·하위폴더 재귀·폴더명 접두로 파일충돌 방지) ⓑ **커리큘럼**(`BASE_YOLO`=gen-synth 학습모델 → split_audit → `real_only_grouped_gencurr`, 배관은 #2로 검증됨) ⓒ **eval에 `2gencurr` 추가 → 2g 대조**(판정 2gencurr ≈/>/< 2g). 슬라이스=`slice_grid.py`(1×2그리드). **데이터=OneDrive 생성이미지 폴더(§5 링크)·검수 TODO(폴더째 몽타주+크로스체크·NB top 모니터사진 제외).** **미확정=이미지 좋음은 필요조건일 뿐 전이개선은 측정해야 앎.**
+
+**참고(eli5 요약본 규칙·[[kitchen-fire-noise-poc]] 메모):** "eli5 요약본"=**eli5 스킬판 `docs/eli5-journey.html`(다크·아티팩트 1d3be5f7)**. 내 흉내판 `docs/eli5-summary.html`(라이트·아티팩트 c2032af8)과 **혼동 금지**·흉내판은 대조용 의도적 보존(삭제 금지). ⚠️eli5-journey.html 로컬 미커밋(GitHub엔 흉내판만·README도 흉내판 링크). 렌더=GitHub는 .html을 코드로 보여줌→아티팩트 링크나 GitHub Pages 필요. **정리는 사용자 지시 대기.**
+
+**도메인갭 지도 현황(§2):** ❌ 못닫음 = 불꽃(v2)·표현(v3)·혼합·**#2커리큘럼**·**#4도메인랜덤화**·**#3엣지·색전처리(sobelb/blend/gray 다 2g지배)**·공개모델·D-Fire · ⚠️보류 = yolo11(#1) / ✅ 닫음 = 실 in-domain 데이터·조리 하드네거(⑤)·시간축·per-site. **병목 = 도메인 매칭(데이터양·모델·불꽃품질·표현트릭 아님).** 남은 최대 갭 = **범용화(안 본 급식실 1.465/분 미해결)**.
 
 **#2 커리큘럼 ✅완료=갭 못닫음(2026-08-26):** 2curr recall 0.813=2g · fpr_급식실 0.409(2g 0.260 악화) · scene 재분배 · 1-seed·conf미매칭. (재현: `BASE_YOLO=<fire_frames>/runs_phaseB/v8_C0_s1/best.pt`[weights/ 없음 주의·runs_if 패턴과 다름]·`BASE_TAG=curr` split_audit → real_only_grouped_curr)
 
